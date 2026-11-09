@@ -1,0 +1,343 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description" content="Browse practical local services to help you settle into Portugal. Discover transport, cleaning, moving and translation assistance.">
+
+    <title>Find Services | SettleBridge</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header>
+    <div class="container navbar">
+
+        <!-- LOGO -->
+        <a href="index.html" class="logo">
+            Settle<span>Bridge</span>
+        </a>
+
+        <!-- MOBILE MENU BUTTON -->
+        <button class="menu-toggle"
+                type="button"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+                aria-controls="main-navigation">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <!-- NAVIGATION -->
+        <nav id="main-navigation">
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="services.html">Find Services</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="become-provider.html">Become a Provider</a></li>
+                <li><a href="about.html">About Us</a></li>
+            </ul>
+            
+            <!-- DESKTOP BUTTONS -->
+            <div class="nav-buttons">
+                <a href="login.html" class="btn btn-outline">Sign In</a>
+                <a href="register.html" class="btn btn-primary">Get Started</a>
+            </div>
+        </nav>
+
+    </div>
+</header>
+
+
+    <!-- PAGE INTRODUCTION -->
+    <section class="page-hero">
+        <div class="container">
+
+            <h1>Find the Help You Need</h1>
+
+            <p>
+                Discover local service providers and practical assistance
+                to make settling into Portugal easier.
+            </p>
+
+        </div>
+    </section>
+
+
+    <!-- SEARCH SECTION -->
+    <section style="padding-top: 0; padding-bottom: 35px;">
+        <div class="container">
+
+            <form class="services-search">
+
+                <input
+                    type="search"
+                    name="keyword"
+                    placeholder="What service are you looking for?"
+                    aria-label="Search services"
+                >
+
+                <select name="city" aria-label="Choose a city">
+                    <option value="">All locations</option>
+                    <option value="lisbon">Lisbon</option>
+                    <option value="porto">Porto</option>
+                    <option value="braga">Braga</option>
+                    <option value="coimbra">Coimbra</option>
+                    <option value="faro">Faro</option>
+                </select>
+
+                <button type="submit" class="btn btn-primary">
+                    Search Services
+                </button>
+
+            </form>
+
+        </div>
+    </section>
+
+
+    <!-- SERVICE RESULTS -->
+    <section style="padding-top: 35px;">
+        <div class="container">
+
+            <div class="services-layout">
+
+                <!-- FILTER SIDEBAR -->
+                <aside class="filter-sidebar">
+
+                    <h3>Filter Services</h3>
+
+                    <div class="filter-group">
+
+                        <h4>Service Categories</h4>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="category" value="airport-pickup">
+                            Airport Pickup
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="category" value="cleaning">
+                            Home and Cleaning
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="category" value="moving">
+                            Moving Assistance
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="category" value="translation">
+                            Translation Services
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="category" value="local-assistance">
+                            Local Assistance
+                        </label>
+
+                    </div>
+
+
+                    <div class="filter-group">
+
+                        <h4>Locations</h4>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="location" value="lisbon">
+                            Lisbon
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="location" value="porto">
+                            Porto
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="location" value="braga">
+                            Braga
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="location" value="coimbra">
+                            Coimbra
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="location" value="faro">
+                            Faro
+                        </label>
+
+                    </div>
+
+
+                    <div class="filter-group">
+
+                        <h4>Languages</h4>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="language" value="english">
+                            English
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="language" value="portuguese">
+                            Portuguese
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="language" value="french">
+                            French
+                        </label>
+
+                        <label class="filter-option">
+                            <input type="checkbox" name="language" value="french">
+                            Dutch
+                        </label>
+
+                    </div>
+
+                </aside>
+
+
+                <!-- MAIN RESULTS AREA -->
+                <div class="services-results">
+
+                    <div class="results-header">
+
+                        <div>
+                            <h2>Available Services</h2>
+                            <p>
+                                Explore services from local providers.
+                            </p>
+                        </div>
+
+                        <select name="sort" aria-label="Sort services">
+                            <option value="recommended">Recommended</option>
+                            <option value="price-low">Price: Low to High</option>
+                            <option value="price-high">Price: High to Low</option>
+                        </select>
+
+                    </div>
+
+
+                    <!-- EMPTY STATE: REPLACE WHEN APPROVED PROVIDERS JOIN -->
+                    <div class="empty-state">
+
+                        <div class="empty-state-icon">⌕</div>
+
+                        <h3>We're Building Our Provider Network</h3>
+
+                        <p>
+                            We're currently welcoming trusted service
+                            providers to SettleBridge. New listings will
+                            appear here as they are reviewed and approved.
+                        </p>
+
+                        <a href="become-provider.html" class="btn btn-primary">
+                            Become a Provider
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+
+    <!-- PROVIDER INVITATION -->
+    <section class="provider-cta">
+
+        <div class="container">
+
+            <h2>Are You a Local Service Provider?</h2>
+
+            <p>
+                Help newcomers settle into Portugal while growing
+                your business. Apply to become part of SettleBridge.
+            </p>
+
+            <a href="become-provider.html" class="btn btn-primary">
+                Join Our Network
+            </a>
+
+        </div>
+
+    </section>
+
+
+    <!-- FOOTER -->
+    <footer>
+
+        <div class="container">
+
+            <div class="footer-content">
+
+                <div class="footer-brand">
+
+                    <a href="index.html" class="logo" style="color: white;">
+                        Settle<span>Bridge</span>
+                    </a>
+
+                    <p>
+                        Arrive with a plan. Settle with confidence.
+                        Connecting newcomers with practical local services.
+                    </p>
+
+                </div>
+
+
+                <div class="footer-column">
+
+                    <h3>Explore</h3>
+
+                    <a href="index.html">Home</a>
+                    <a href="services.html">Find Services</a>
+                    <a href="index.html#how-it-works">How It Works</a>
+                    <a href="become-provider.html">Become a Provider</a>
+
+                </div>
+
+
+                <div class="footer-column">
+
+                    <h3>Support</h3>
+
+                    <a href="help.html">Help Centre</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms and Conditions</a>
+                    <a href="contact.html">Contact Us</a>
+
+                </div>
+
+            </div>
+
+
+            <div class="footer-bottom">
+
+                <p>© 2026 SettleBridge. All rights reserved.</p>
+
+            </div>
+
+        </div>
+
+    </footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

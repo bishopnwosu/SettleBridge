@@ -1,0 +1,171 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Login | SettleBridge</title>
+
+    <meta name="description" content="Log in to your SettleBridge account to manage your service requests and bookings.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header>
+    <div class="container navbar">
+
+        <!-- LOGO -->
+        <a href="index.html" class="logo">
+            Settle<span>Bridge</span>
+        </a>
+
+        <!-- MOBILE MENU BUTTON -->
+        <button class="menu-toggle"
+                type="button"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+                aria-controls="main-navigation">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <!-- NAVIGATION -->
+        <nav id="main-navigation">
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="services.html">Find Services</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="become-provider.html">Become a Provider</a></li>
+                <li><a href="about.html">About Us</a></li>
+            </ul>
+            
+            <!-- DESKTOP BUTTONS -->
+            <div class="nav-buttons">
+                <a href="login.html" class="btn btn-outline">Sign In</a>
+                <a href="register.html" class="btn btn-primary">Get Started</a>
+            </div>
+        </nav>
+
+    </div>
+</header>
+
+
+    <!-- LOGIN SECTION -->
+    <section class="login-section">
+
+        <div class="login-wrapper">
+
+            <div class="login-heading">
+                <h1>Welcome Back</h1>
+                <p>Log in to your SettleBridge account.</p>
+            </div>
+
+            <form class="login-form" id="loginForm">
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="Enter your email address"
+                        autocomplete="email"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <div class="login-options">
+                    <a href="forgot-password.html">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary login-submit">
+                    Log In
+                </button>
+
+            </form>
+
+            <div class="login-register">
+                Don't have an account?
+                <a href="register.html">Create an account</a>
+            </div>
+
+            <div class="login-provider">
+                Are you a service provider?
+                <a href="become-provider.html">Join SettleBridge</a>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+
+            <div class="footer-content">
+
+                <div class="footer-brand">
+                    <a href="index.html" class="logo" style="color: white;">
+                        Settle<span style="color: #16A085;">Bridge</span>
+                    </a>
+
+                    <p>
+                        Arrive with a plan. Settle with confidence.
+                        Connecting newcomers with reliable local services.
+                    </p>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Explore</h4>
+                    <a href="services.html">Find Services</a>
+                    <a href="about.html">About Us</a>
+                    <a href="become-provider.html">Become a Provider</a>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Account</h4>
+                    <a href="login.html">Login</a>
+                    <a href="register.html">Register</a>
+                </div>
+
+                <div class="footer-column">
+                    <h4>Support</h4>
+                    <a href="help.html">Help Centre</a>
+                    <a href="contact.html">Contact Us</a>
+                </div>
+
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2026 SettleBridge. All rights reserved.</p>
+            </div>
+
+        </div>
+    </footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

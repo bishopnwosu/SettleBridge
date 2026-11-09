@@ -1,0 +1,688 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description" content="Join SettleBridge as a local service provider. Connect with newcomers in Portugal looking for reliable local services.">
+
+    <title>Become a Provider | SettleBridge</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header>
+    <div class="container navbar">
+
+        <!-- LOGO -->
+        <a href="index.html" class="logo">
+            Settle<span>Bridge</span>
+        </a>
+
+        <!-- MOBILE MENU BUTTON -->
+        <button class="menu-toggle"
+                type="button"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+                aria-controls="main-navigation">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <!-- NAVIGATION -->
+        <nav id="main-navigation">
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="services.html">Find Services</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="become-provider.html">Become a Provider</a></li>
+                <li><a href="about.html">About Us</a></li>
+            </ul>
+            
+            <!-- DESKTOP BUTTONS -->
+            <div class="nav-buttons">
+                <a href="login.html" class="btn btn-outline">Sign In</a>
+                <a href="register.html" class="btn btn-primary">Get Started</a>
+            </div>
+        </nav>
+
+    </div>
+</header>
+
+
+    <!-- PROVIDER HERO -->
+    <section class="provider-hero">
+
+        <div class="container">
+
+            <h1>Grow Your Business With SettleBridge</h1>
+
+            <p>
+                Connect with immigrants, international students,
+                foreign workers and families looking for practical
+                local services in Portugal.
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- PROVIDER BENEFITS -->
+    <section>
+
+        <div class="container">
+
+            <div class="section-heading">
+
+                <h2>Why Join SettleBridge?</h2>
+
+                <p>
+                    Make your services easier to discover
+                    by people who need them.
+                </p>
+
+            </div>
+
+
+            <div class="provider-benefits">
+
+                <div class="provider-benefit-card">
+
+                    <h3>Reach New Customers</h3>
+
+                    <p>
+                        Make your business visible to newcomers
+                        searching for services in your area.
+                    </p>
+
+                </div>
+
+
+                <div class="provider-benefit-card">
+
+                    <h3>Showcase Your Services</h3>
+
+                    <p>
+                        Present your services, experience,
+                        languages and pricing in one place.
+                    </p>
+
+                </div>
+
+
+                <div class="provider-benefit-card">
+
+                    <h3>Build Your Reputation</h3>
+
+                    <p>
+                        Develop customer trust through accurate
+                        business information and genuine customer feedback.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- PROVIDER APPLICATION FORM -->
+    <section class="application-section">
+
+        <div class="container">
+
+            <div class="application-wrapper">
+
+                <div class="application-heading">
+
+                    <h2>Provider Registration Form</h2>
+
+                    <p>
+                        Complete the application below.
+                        Our team will review your information
+                        before approving your listing.
+                    </p>
+
+                </div>
+
+
+                <form id="providerApplication">
+
+                    <!-- PERSONAL INFORMATION -->
+                    <div class="form-section">
+
+                        <h3>1. Contact Information</h3>
+
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label for="fullName">Full Name *</label>
+
+                                <input
+                                    type="text"
+                                    id="fullName"
+                                    name="fullName"
+                                    placeholder="Enter your full name"
+                                    autocomplete="name"
+                                    required
+                                >
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="email">Email Address *</label>
+
+                                <input
+                                    type="email"
+                                    id="email"
+                                    name="email"
+                                    placeholder="example@email.com"
+                                    autocomplete="email"
+                                    required
+                                >
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="phone">Phone Number *</label>
+
+                                <input
+                                    type="tel"
+                                    id="phone"
+                                    name="phone"
+                                    placeholder="+351 000 000 000"
+                                    autocomplete="tel"
+                                    required
+                                >
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="whatsapp">WhatsApp Number</label>
+
+                                <input
+                                    type="tel"
+                                    id="whatsapp"
+                                    name="whatsapp"
+                                    placeholder="+351 000 000 000"
+                                >
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- BUSINESS INFORMATION -->
+                    <div class="form-section">
+
+                        <h3>2. Business Information</h3>
+
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label for="businessName">Business Name *</label>
+
+                                <input
+                                    type="text"
+                                    id="businessName"
+                                    name="businessName"
+                                    placeholder="Enter business name"
+                                    required
+                                >
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="businessType">Business Type *</label>
+
+                                <select
+                                    id="businessType"
+                                    name="businessType"
+                                    required
+                                >
+                                    <option value="">Select business type</option>
+                                    <option value="registered-company">Registered Company</option>
+                                    <option value="sole-trader">Sole Trader</option>
+                                    <option value="independent-professional">Independent Professional</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="country">Country *</label>
+
+                                <select id="country" name="country" required>
+                                    <option value="Portugal">Portugal</option>
+                                </select>
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="city">City *</label>
+
+                                <select id="city" name="city" required>
+                                    <option value="">Select your city</option>
+                                    <option value="Lisbon">Lisbon</option>
+                                    <option value="Porto">Porto</option>
+                                    <option value="Braga">Braga</option>
+                                    <option value="Coimbra">Coimbra</option>
+                                    <option value="Faro">Faro</option>
+                                    <option value="Aveiro">Aveiro</option>
+                                    <option value="Setubal">Setúbal</option>
+                                    <option value="Other">Other location</option>
+                                </select>
+                            </div>
+
+
+                            <div class="form-group full-width">
+                                <label for="website">Website or Social Media Link</label>
+
+                                <input
+                                    type="url"
+                                    id="website"
+                                    name="website"
+                                    placeholder="https://yourwebsite.com"
+                                >
+
+                                <span class="form-note">
+                                    Optional. You can provide a business website
+                                    or professional social media page.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- SERVICE INFORMATION -->
+                    <div class="form-section">
+
+                        <h3>3. Services You Provide</h3>
+
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label for="serviceCategory">Main Service Category *</label>
+
+                                <select
+                                    id="serviceCategory"
+                                    name="serviceCategory"
+                                    required
+                                >
+                                    <option value="">Select a category</option>
+                                    <option value="airport-pickup">Airport Pickup and Transportation</option>
+                                    <option value="cleaning">Home and Cleaning</option>
+                                    <option value="moving">Moving Assistance</option>
+                                    <option value="translation">Translation and Interpretation</option>
+                                    <option value="local-assistance">Local Assistance</option>
+                                    <option value="other">Other Services</option>
+                                </select>
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="pricingType">Pricing Type *</label>
+
+                                <select
+                                    id="pricingType"
+                                    name="pricingType"
+                                    required
+                                >
+                                    <option value="">Select pricing type</option>
+                                    <option value="fixed">Fixed Price</option>
+                                    <option value="hourly">Hourly Rate</option>
+                                    <option value="quote">Price on Request</option>
+                                </select>
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="basePrice">Starting Price (€)</label>
+
+                                <input
+                                    type="number"
+                                    id="basePrice"
+                                    name="basePrice"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="e.g. 25"
+                                >
+
+                                <span class="form-note">
+                                    Leave blank if you provide quotations.
+                                </span>
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="languages">Languages Spoken *</label>
+
+                                <input
+                                    type="text"
+                                    id="languages"
+                                    name="languages"
+                                    placeholder="English, Portuguese, French..."
+                                    required
+                                >
+                            </div>
+
+
+                            <div class="form-group full-width">
+                                <label for="serviceDescription">
+                                    Describe Your Services *
+                                </label>
+
+                                <textarea
+                                    id="serviceDescription"
+                                    name="serviceDescription"
+                                    placeholder="Tell us about your services, experience and the type of customers you assist."
+                                    required
+                                ></textarea>
+                            </div>
+
+
+                            <div class="form-group full-width">
+                                <label for="serviceArea">
+                                    Areas You Serve *
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="serviceArea"
+                                    name="serviceArea"
+                                    placeholder="e.g. Lisbon, Sintra and nearby areas"
+                                    required
+                                >
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- DOCUMENTATION -->
+                    <div class="form-section">
+
+                        <h3>4. Business Verification</h3>
+
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label for="registrationNumber">
+                                    Business Registration Number
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="registrationNumber"
+                                    name="registrationNumber"
+                                    placeholder="Enter registration number"
+                                >
+
+                                <span class="form-note">
+                                    Optional at the initial application stage.
+                                </span>
+                            </div>
+
+
+                            <div class="form-group">
+                                <label for="documentType">Supporting Document Type</label>
+
+                                <select id="documentType" name="documentType">
+                                    <option value="">Select document type</option>
+                                    <option value="business-registration">Business Registration</option>
+                                    <option value="professional-license">Professional Licence</option>
+                                    <option value="other">Other Supporting Document</option>
+                                </select>
+                            </div>
+
+
+                            <div class="form-group full-width">
+                                <label for="documentLink">
+                                    Supporting Document Link
+                                </label>
+
+                                <input
+                                    type="url"
+                                    id="documentLink"
+                                    name="documentLink"
+                                    placeholder="Optional secure document link"
+                                >
+
+                                <span class="form-note">
+                                    Do not enter sensitive personal documents
+                                    into an unsecured public link. We will
+                                    provide a secure upload process when available.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- TERMS AND SUBMISSION -->
+                    <div class="form-section">
+
+                        <h3>5. Confirmation</h3>
+
+                        <label class="form-checkbox">
+
+                            <input
+                                type="checkbox"
+                                name="informationConfirmation"
+                                required
+                            >
+
+                            <span>
+                                I confirm that the information provided
+                                is accurate and complete.
+                            </span>
+
+                        </label>
+
+
+                        <label class="form-checkbox">
+
+                            <input
+                                type="checkbox"
+                                name="termsAgreement"
+                                required
+                            >
+
+                            <span>
+                                I agree to the
+                                <a href="terms.html" class="text-link">
+                                    Terms and Conditions
+                                </a>
+                                and
+                                <a href="privacy.html" class="text-link">
+                                    Privacy Policy
+                                </a>.
+                            </span>
+
+                        </label>
+
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary submit-application"
+                        >
+                            Submit Provider Application
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+
+            <div class="application-info">
+
+                <p>
+                    Submitting an application does not guarantee approval.
+                    All provider applications are subject to review.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- PROVIDER FAQ -->
+    <section>
+
+        <div class="container">
+
+            <div class="section-heading">
+
+                <h2>Provider Questions</h2>
+
+                <p>
+                    Here are some things you may want to know
+                    before applying.
+                </p>
+
+            </div>
+
+
+            <div class="provider-faq">
+
+                <div class="faq-item">
+
+                    <h3>Who can become a provider?</h3>
+
+                    <p>
+                        Businesses and independent professionals
+                        offering relevant local services may apply.
+                        Some services may require professional
+                        qualifications or licences.
+                    </p>
+
+                </div>
+
+
+                <div class="faq-item">
+
+                    <h3>Is registration automatically approved?</h3>
+
+                    <p>
+                        No. Applications are reviewed before providers
+                        and their services are published.
+                    </p>
+
+                </div>
+
+
+                <div class="faq-item">
+
+                    <h3>Does it cost money to apply?</h3>
+
+                    <p>
+                        There is no application fee during our initial
+                        provider onboarding phase.
+                    </p>
+
+                </div>
+
+
+                <div class="faq-item">
+
+                    <h3>How will customers contact me?</h3>
+
+                    <p>
+                        Initially, customers will be able to submit
+                        service enquiries through SettleBridge.
+                        Further contact and payment arrangements
+                        will be agreed directly with providers.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- FOOTER -->
+    <footer>
+
+        <div class="container">
+
+            <div class="footer-content">
+
+                <div class="footer-brand">
+
+                    <a href="index.html" class="logo" style="color: white;">
+                        Settle<span>Bridge</span>
+                    </a>
+
+                    <p>
+                        Arrive with a plan. Settle with confidence.
+                        Connecting newcomers with practical local services.
+                    </p>
+
+                </div>
+
+
+                <div class="footer-column">
+
+                    <h3>Explore</h3>
+
+                    <a href="index.html">Home</a>
+                    <a href="services.html">Find Services</a>
+                    <a href="index.html#how-it-works">How It Works</a>
+                    <a href="about.html">About Us</a>
+
+                </div>
+
+
+                <div class="footer-column">
+
+                    <h3>Support</h3>
+
+                    <a href="help.html">Help Centre</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms and Conditions</a>
+                    <a href="contact.html">Contact Us</a>
+
+                </div>
+
+            </div>
+
+
+            <div class="footer-bottom">
+
+                <p>© 2026 SettleBridge. All rights reserved.</p>
+
+            </div>
+
+        </div>
+
+    </footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
