@@ -1633,3 +1633,37 @@ footer {
     }
 
 }
+
+
+/* ABOUT US IMAGE */
+
+.about-image {
+    width: 100%;
+    height: 350px;
+    overflow: hidden;
+    border-radius: 14px;
+}
+
+.about-us-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 14px;
+}
+
+/* MOBILE RESPONSIVENESS */
+
+@media (max-width: 768px) {
+    .about-image {
+        height: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-image {
+        height: 250px;
+    }
+}
+
