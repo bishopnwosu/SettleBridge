@@ -2,49 +2,52 @@
 document.addEventListener("DOMContentLoaded", function () {
 
     
-// =====================================
-// 1. MOBILE NAVIGATION
-// =====================================
+    // =====================================
+    // 1. MOBILE NAVIGATION
+    // =====================================
 
-const menuToggle = document.querySelector(".menu-toggle");
-const navLinks = document.querySelector(".nav-links");
-const navButtons = document.querySelector(".nav-buttons");
+    const menuToggle = document.querySelector(".menu-toggle");
+    const mainNavigation = document.querySelector("#main-navigation");
+    const navButtons = document.querySelector(".nav-buttons");
 
-if (menuToggle && navLinks) {
+    if (menuToggle && mainNavigation) {
 
-    menuToggle.addEventListener("click", function () {
+        menuToggle.addEventListener("click", function () {
 
-        navLinks.classList.toggle("active");
-        navButtons.classList.toggle("active");
+            const isOpen = mainNavigation.classList.toggle("active");
 
-        const isOpen = navLinks.classList.contains("active");
-        const isButtonsOpen = navButtons.classList.contains("active");
+            if (navButtons) {
+                navButtons.classList.toggle("active", isOpen);
+            }
 
-        menuToggle.setAttribute("aria-expanded", isOpen);
-        menuToggle.setAttribute("aria-expanded", isButtonsOpen);
+            menuToggle.setAttribute("aria-expanded", String(isOpen));
 
-        menuToggle.setAttribute(
-            "aria-label",
-            isOpen ? "Close navigation menu" : "Open navigation menu"
-        );
+            menuToggle.setAttribute(
+                "aria-label",
+                isOpen ? "Close navigation menu" : "Open navigation menu"
+            );
 
-    });
-
-    // Close menu after clicking a navigation link
-
-    navLinks.querySelectorAll("a").forEach(function (link) {
-
-        link.addEventListener("click", function () {
-            navLinks.classList.remove("active");
-            navButtons.classList.remove("active");
-            menuToggle.setAttribute("aria-expanded", "false");
-            menuToggle.setAttribute("aria-label", "Open navigation menu");
         });
 
-    });
+        // Close menu after clicking a navigation link
+        mainNavigation.querySelectorAll("a").forEach(function (link) {
 
-}
+            link.addEventListener("click", function () {
 
+                mainNavigation.classList.remove("active");
+
+                if (navButtons) {
+                    navButtons.classList.remove("active");
+                }
+
+                menuToggle.setAttribute("aria-expanded", "false");
+                menuToggle.setAttribute("aria-label", "Open navigation menu");
+
+            });
+
+        });
+
+    }
 
 
     // =====================================
