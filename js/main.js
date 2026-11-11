@@ -216,19 +216,12 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+// =====================================
+// 8. GENERAL CONTACT FORM
+// =====================================
 
-    // =====================================
-    // 8. GENERAL CONTACT FORM
-    // =====================================
+const contactForm = document.querySelector("#contactForm");
 
-    const contactForm = document.querySelector("#contactForm");
-
-    if (contactForm) {
-        contactForm.addEventListener("submit", function (event) {
-            event.preventDefault();
-
-            alert("The contact form is not connected yet. Please check back later.");
-        });
-    }
-
+// Netlify handles contact form submissions directly.
+// Do not prevent the default form submission.
 });
