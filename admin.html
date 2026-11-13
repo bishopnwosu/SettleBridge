@@ -1,0 +1,106 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard | SettleBridge</title>
+
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<header>
+    <div class="container navbar">
+        <a href="index.html" class="logo">
+            Settle<span style="color:#16A085;">Bridge</span>
+        </a>
+
+        <div class="nav-buttons">
+            <span>Administrator</span>
+            <button id="adminLogout" class="btn btn-outline" type="button">
+                Log Out
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="container" style="padding-top:50px; padding-bottom:70px;">
+
+    <div style="margin-bottom:30px;">
+        <h1>Admin Dashboard</h1>
+        <p>Manage provider applications and monitor your marketplace.</p>
+    </div>
+
+    
+<!-- ADMIN SUMMARY CARDS -->
+<section class="admin-stats">
+
+    <div class="stat-card">
+        <h3>Total Applications</h3>
+        <p id="totalApplications">0</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Pending</h3>
+        <p id="pendingApplications">0</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Approved</h3>
+        <p id="approvedApplications">0</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Rejected</h3>
+        <p id="rejectedApplications">0</p>
+    </div>
+
+</section>
+
+
+    <section style="margin-bottom:35px;">
+        <section class="admin-section">
+    <h2>Provider Applications</h2>
+        <p>Review applications submitted by service providers.</p>
+
+        <div class="admin-table-wrapper">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="padding:14px; text-align:left;">Business</th>
+                        <th style="padding:14px; text-align:left;">Contact</th>
+                        <th style="padding:14px; text-align:left;">City</th>
+                        <th style="padding:14px; text-align:left;">Status</th>
+                        <th style="padding:14px; text-align:left;">Date</th>
+                        <th style="padding:14px; text-align:left;">Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="applicationsTable">
+                    <tr>
+                        <td colspan="6" style="padding:20px; text-align:center;">
+                            Loading applications...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p id="adminMessage" style="margin-top:20px;"></p>
+    </section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

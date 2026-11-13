@@ -2151,3 +2151,144 @@ footer {
     }
 
 }
+
+
+/* =====================================
+   ADMIN DASHBOARD
+===================================== */
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #FFFFFF;
+    margin-top: 20px;
+    min-width: 650px;
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid #E2E8F0;
+    font-size: 14px;
+}
+
+.admin-table th {
+    background: #F4F7FA;
+    color: #0A3D62;
+    font-weight: 600;
+}
+
+.admin-table td {
+    color: #172B3A;
+}
+
+.admin-table tr:hover {
+    background: #F8FAFC;
+}
+
+.admin-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    background: #FFFFFF;
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+}
+
+.admin-section {
+    margin-top: 35px;
+    padding: 25px;
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.04);
+}
+
+.admin-section h2 {
+    color: #0A3D62;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .admin-section {
+        padding: 15px;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 12px;
+    }
+}
+
+
+/* ADMIN APPLICATION STATUS LABELS */
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-pending {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.status-approved {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.status-rejected {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+
+/* =====================================
+   ADMIN DASHBOARD SUMMARY CARDS
+===================================== */
+
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-top: 30px;
+    margin-bottom: 35px;
+}
+
+.stat-card {
+    background: #FFFFFF;
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+}
+
+.stat-card h3 {
+    color: #64748B;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+
+.stat-card p {
+    color: #0A3D62;
+    font-size: 30px;
+    font-weight: 700;
+    margin: 0;
+}
+
+@media (max-width: 900px) {
+    .admin-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 500px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+}

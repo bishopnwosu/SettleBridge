@@ -332,14 +332,13 @@
                                     id="serviceCategory"
                                     name="serviceCategory"
                                     required
-                                >
-                                    <option value="">Select a category</option>
-                                    <option value="airport-pickup">Airport Pickup and Transportation</option>
-                                    <option value="cleaning">Home and Cleaning</option>
-                                    <option value="moving">Moving Assistance</option>
-                                    <option value="translation">Translation and Interpretation</option>
-                                    <option value="local-assistance">Local Assistance</option>
-                                    <option value="other">Other Services</option>
+                                ><option value="">Select a category</option>
+<option value="airport-pickup">Airport Pickup and Transportation</option>
+<option value="home-cleaning">Home and Cleaning</option>
+<option value="moving-assistance">Moving Assistance</option>
+<option value="translation-services">Translation and Interpretation</option>
+<option value="local-assistance">Local Assistance</option>
+<option value="other-services">Other Services</option>
                                 </select>
                             </div>
 
@@ -397,11 +396,14 @@
                                 </label>
 
                                 <textarea
-                                    id="serviceDescription"
-                                    name="serviceDescription"
-                                    placeholder="Tell us about your services, experience and the type of customers you assist."
-                                    required
-                                ></textarea>
+    id="serviceDescription"
+    name="serviceDescription"
+    placeholder="Tell us about your services, experience and the type of customers you assist."
+    minlength="20"
+    maxlength="2000"
+    required
+    
+></textarea>
                             </div>
 
 
@@ -459,28 +461,6 @@
                                     <option value="other">Other Supporting Document</option>
                                 </select>
                             </div>
-
-
-                            <div class="form-group full-width">
-                                <label for="documentLink">
-                                    Supporting Document Link
-                                </label>
-
-                                <input
-                                    type="url"
-                                    id="documentLink"
-                                    name="documentLink"
-                                    placeholder="Optional secure document link"
-                                >
-
-                                <span class="form-note">
-                                    Do not enter sensitive personal documents
-                                    into an unsecured public link. We will
-                                    provide a secure upload process when available.
-                                </span>
-                            </div>
-
-                        </div>
 
                     </div>
 
@@ -689,7 +669,11 @@
         </div>
 
     </footer>
+<!-- SUPABASE JAVASCRIPT LIBRARY -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<!-- WEBSITE JAVASCRIPT -->
 <script src="js/main.js"></script>
+
 </body>
 </html>
