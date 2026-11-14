@@ -308,14 +308,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const loginForm = document.querySelector("#loginForm");
 
   if (loginForm) {
-
     const loginSupabase = window.supabase.createClient(
       "https://jnvirsxymqdginyatyjq.supabase.co",
-      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8"
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
     );
 
     loginForm.addEventListener("submit", async function (event) {
-
       event.preventDefault();
 
       const email = document.querySelector("#email").value.trim();
@@ -328,16 +326,16 @@ document.addEventListener("DOMContentLoaded", function () {
       submitButton.textContent = "Logging in...";
 
       try {
-
         const { data, error } = await loginSupabase.auth.signInWithPassword({
           email: email,
-          password: password
+          password: password,
         });
 
         if (error) throw error;
 
-        const { data: isAdmin, error: adminError } =
-          await loginSupabase.rpc("is_settlebridge_admin");
+        const { data: isAdmin, error: adminError } = await loginSupabase.rpc(
+          "is_settlebridge_admin",
+        );
 
         if (adminError) throw adminError;
 
@@ -346,22 +344,18 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
           window.location.href = "index.html";
         }
-
       } catch (error) {
-
         console.error("Login error:", error);
-        alert("Login failed. Please check your email and password and try again.");
-
+        alert(
+          "Login failed. Please check your email and password and try again.",
+        );
       } finally {
-
         submitButton.disabled = false;
         submitButton.textContent = originalText;
-
       }
-
     });
   }
-  
+
   // =====================================
   // 10. SETTLEBRIDGE ADMIN DASHBOARD
   // =====================================
@@ -369,10 +363,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const applicationsTable = document.querySelector("#applicationsTable");
 
   if (applicationsTable) {
-
     const adminSupabase = window.supabase.createClient(
       "https://jnvirsxymqdginyatyjq.supabase.co",
-      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8"
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
     );
 
     const adminMessage = document.querySelector("#adminMessage");
@@ -380,7 +373,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // CHECK ADMIN LOGIN AND PERMISSIONS
     async function checkAdminAccess() {
-
       const { data: sessionData, error: sessionError } =
         await adminSupabase.auth.getSession();
 
@@ -389,8 +381,9 @@ document.addEventListener("DOMContentLoaded", function () {
         return false;
       }
 
-      const { data: isAdmin, error: adminError } =
-        await adminSupabase.rpc("is_settlebridge_admin");
+      const { data: isAdmin, error: adminError } = await adminSupabase.rpc(
+        "is_settlebridge_admin",
+      );
 
       if (adminError || !isAdmin) {
         alert("You do not have permission to access this dashboard.");
@@ -404,7 +397,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // DISPLAY PROVIDER APPLICATIONS
     async function loadApplications() {
-
       applicationsTable.innerHTML = `
         <tr>
           <td colspan="6" style="padding:20px; text-align:center;">
@@ -415,33 +407,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const { data: applications, error } = await adminSupabase
         .from("provider_applications")
-        .select("id, business_name, contact_name, email, phone, city, status, created_at")
+        .select(
+          "id, business_name, contact_name, email, phone, city, status, created_at",
+        )
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Applications error:", error);
-        adminMessage.textContent = "Unable to load applications. Please try again.";
+        adminMessage.textContent =
+          "Unable to load applications. Please try again.";
         applicationsTable.replaceChildren();
         return;
       }
 
-      
-// =====================================
-// UPDATE ADMIN SUMMARY CARDS
-// =====================================
+      // =====================================
+      // UPDATE ADMIN SUMMARY CARDS
+      // =====================================
 
-document.querySelector("#totalApplications").textContent =
-    applications.length;
+      document.querySelector("#totalApplications").textContent =
+        applications.length;
 
-document.querySelector("#pendingApplications").textContent =
-    applications.filter(app => app.status === "pending").length;
+      document.querySelector("#pendingApplications").textContent =
+        applications.filter((app) => app.status === "pending").length;
 
-document.querySelector("#approvedApplications").textContent =
-    applications.filter(app => app.status === "approved").length;
+      document.querySelector("#approvedApplications").textContent =
+        applications.filter((app) => app.status === "approved").length;
 
-document.querySelector("#rejectedApplications").textContent =
-    applications.filter(app => app.status === "rejected").length;
-
+      document.querySelector("#rejectedApplications").textContent =
+        applications.filter((app) => app.status === "rejected").length;
 
       applicationsTable.replaceChildren();
 
@@ -460,7 +453,6 @@ document.querySelector("#rejectedApplications").textContent =
       }
 
       applications.forEach(function (application) {
-
         const row = document.createElement("tr");
 
         const values = [
@@ -468,39 +460,36 @@ document.querySelector("#rejectedApplications").textContent =
           application.contact_name + " (" + application.email + ")",
           application.city,
           application.status,
-          new Date(application.created_at).toLocaleDateString()
+          new Date(application.created_at).toLocaleDateString(),
         ];
 
-       
-values.forEach(function (value, index) {
-    const cell = document.createElement("td");
+        values.forEach(function (value, index) {
+          const cell = document.createElement("td");
 
-    cell.style.padding = "14px";
-    cell.style.borderTop = "1px solid #E5E7EB";
+          cell.style.padding = "14px";
+          cell.style.borderTop = "1px solid #E5E7EB";
 
-    // Style the application status
-    if (index === 3) {
-        const statusBadge = document.createElement("span");
-        const status = String(value || "Not provided").toLowerCase();
+          // Style the application status
+          if (index === 3) {
+            const statusBadge = document.createElement("span");
+            const status = String(value || "Not provided").toLowerCase();
 
-        statusBadge.className = "status-badge status-" + status;
-        statusBadge.textContent = value || "Not provided";
+            statusBadge.className = "status-badge status-" + status;
+            statusBadge.textContent = value || "Not provided";
 
-        cell.appendChild(statusBadge);
-    } else {
-        cell.textContent = value || "Not provided";
-    }
+            cell.appendChild(statusBadge);
+          } else {
+            cell.textContent = value || "Not provided";
+          }
 
-    row.appendChild(cell);
-});
-
+          row.appendChild(cell);
+        });
 
         const actionCell = document.createElement("td");
         actionCell.style.padding = "14px";
         actionCell.style.borderTop = "1px solid #E5E7EB";
 
         if (application.status === "pending") {
-
           const approveButton = document.createElement("button");
           approveButton.textContent = "Approve";
           approveButton.type = "button";
@@ -520,54 +509,70 @@ values.forEach(function (value, index) {
 
           actionCell.appendChild(approveButton);
           actionCell.appendChild(rejectButton);
-
         } else {
           actionCell.textContent = "Reviewed";
         }
 
         row.appendChild(actionCell);
         applicationsTable.appendChild(row);
-
       });
 
       adminMessage.textContent =
         applications.length + " provider application(s) found.";
-
     }
 
     // APPROVE OR REJECT APPLICATION
+    // Sends the decision to the secure "review-application" Edge Function.
+    // The server checks you are an admin, updates the status and emails the provider.
     async function updateApplication(applicationId, newStatus) {
+      const decision = newStatus === "approved" ? "approve" : "reject";
 
       const confirmed = confirm(
-        "Are you sure you want to " + newStatus + " this application?"
+        "Are you sure you want to " +
+          decision +
+          " this application? The provider will be emailed.",
       );
 
       if (!confirmed) return;
 
-      const { error } = await adminSupabase
-        .from("provider_applications")
-        .update({
-          status: newStatus,
-          reviewed_at: new Date().toISOString()
-        })
-        .eq("id", applicationId);
+      // Prevent double-clicks while we wait for the server
+      applicationsTable.querySelectorAll("button").forEach(function (button) {
+        button.disabled = true;
+      });
 
-      if (error) {
-        console.error("Update error:", error);
-        alert("Unable to update this application. Please try again.");
-        return;
+      try {
+        const { data, error } = await adminSupabase.functions.invoke(
+          "swift-api",
+          { body: { applicationId: applicationId, decision: decision } },
+        );
+
+        if (error) {
+          let message = "Unable to update this application. Please try again.";
+
+          // Show the server's own explanation if there is one
+          if (error.context && typeof error.context.json === "function") {
+            try {
+              const details = await error.context.json();
+              if (details.error) message = details.error;
+            } catch (readError) {
+              // Keep the default message
+            }
+          }
+
+          console.error("Review error:", error);
+          alert(message);
+          return;
+        }
+
+        alert(data.message);
+      } finally {
+        loadApplications();
       }
-
-      alert("Application successfully " + newStatus + ".");
-      loadApplications();
-
     }
 
     // ADMIN LOGOUT
     if (logoutButton) {
-
       logoutButton.addEventListener("click", async function () {
-
         const { error } = await adminSupabase.auth.signOut();
 
         if (error) {
@@ -576,20 +581,14 @@ values.forEach(function (value, index) {
         }
 
         window.location.href = "login.html";
-
       });
-
     }
 
     // START DASHBOARD
     checkAdminAccess().then(function (isAdmin) {
-
       if (isAdmin) {
         loadApplications();
       }
-
     });
-
   }
-
 });
