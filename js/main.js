@@ -2383,6 +2383,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const GUIDE_IMAGE_BUCKET = "blog-images";
     const GUIDE_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+    const GUIDE_SITE_URL = "https://settlebridgee.netlify.app";
+
+    // Replace {title}, {summary}, {sep} and {site} (same tags as the admin editor)
+    function fillGuideTags(template, guide) {
+      return template
+        .replace(/\{title\}/g, guide.title || "")
+        .replace(/\{summary\}/g, guide.summary || "")
+        .replace(/\{sep\}/g, "|")
+        .replace(/\{site\}/g, "SettleBridge")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
 
     function formatGuideDate(value) {
       if (!value) return "";
@@ -2566,6 +2578,19 @@ document.addEventListener("DOMContentLoaded", function () {
         if (meta && text) meta.setAttribute("content", text);
       }
 
+      // Tells Google the one official address of this guide
+      function setCanonicalUrl(url) {
+        let link = document.querySelector('link[rel="canonical"]');
+
+        if (!link) {
+          link = document.createElement("link");
+          link.rel = "canonical";
+          document.head.appendChild(link);
+        }
+
+        link.href = url;
+      }
+
       async function loadRelatedGuides(guide) {
         const { data, error } = await guidesSupabase
           .from("blog_posts")
@@ -2606,7 +2631,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const { data: guide, error } = await guidesSupabase
           .from("blog_posts")
           .select(
-            "title, slug, summary, content, category, cover_image_path, cover_image_alt, published_at",
+            "title, slug, summary, content, category, cover_image_path, cover_image_alt, published_at, seo_title, meta_description",
           )
           .eq("slug", slug)
           .eq("status", "published")
@@ -2624,9 +2649,14 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        // Page title and Google description
-        document.title = guide.title + " | SettleBridge";
-        setMetaDescription(guide.summary);
+        // Page title and Google description (from the SEO panel in the admin editor)
+        document.title =
+          fillGuideTags(guide.seo_title || "{title} {sep} {site}", guide) ||
+          guide.title + " | SettleBridge";
+        setMetaDescription(fillGuideTags(guide.meta_description || "{summary}", guide));
+        setCanonicalUrl(
+          GUIDE_SITE_URL + "/guide.html?slug=" + encodeURIComponent(guide.slug),
+        );
 
         // Heading
         document.querySelector("#guideBreadcrumbCategory").textContent = guide.category;
