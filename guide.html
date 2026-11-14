@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description" content="A practical guide for newcomers settling in Portugal.">
+
+    <title>Guide | SettleBridge</title>
+
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- HEADER -->
+<header>
+    <div class="container navbar">
+
+        <!-- LOGO -->
+        <a href="index.html" class="logo">
+            Settle<span style="color: #16A085;">Bridge</span>
+        </a>
+
+        <!-- MOBILE MENU BUTTON -->
+        <button class="menu-toggle"
+                type="button"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+                aria-controls="main-navigation">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <!-- CENTRE NAVIGATION -->
+        <nav id="main-navigation">
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="services.html">Find Services</a></li>
+                <li><a href="about.html">About Us</a></li>
+                <li><a href="guides.html" aria-current="page">Guides</a></li>
+                <li><a href="become-provider.html">Become a Provider</a></li>
+            </ul>
+        </nav>
+
+        <!-- RIGHT SIDE BUTTONS -->
+        <div class="nav-buttons">
+            <a href="login.html" class="btn btn-outline">Login</a>
+            <a href="register.html" class="btn btn-primary">Get Started</a>
+        </div>
+
+    </div>
+</header>
+
+
+    <main class="container sbg-main">
+
+        <p id="guideStatus" class="sbg-status" role="status">Loading guide...</p>
+
+        <!-- NOT FOUND -->
+        <div id="guideNotFound" class="sbg-not-found" hidden>
+            <h1>Guide not found</h1>
+            <p>This guide may have been moved or is no longer available.</p>
+            <a href="guides.html" class="sbg-cta-button sbg-cta-button-dark">See all guides</a>
+        </div>
+
+        <!-- THE GUIDE -->
+        <article id="guideArticle" class="sbg-article" hidden>
+
+            <nav aria-label="Breadcrumb" class="sbg-breadcrumb">
+                <a href="guides.html">Guides</a>
+                <span aria-hidden="true">/</span>
+                <span id="guideBreadcrumbCategory"></span>
+            </nav>
+
+            <div class="sbg-article-head">
+                <span id="guideCategory" class="sbg-eyebrow"></span>
+                <h1 id="guideTitle"></h1>
+                <p id="guideSummary" class="sbg-article-summary"></p>
+                <span id="guideMeta" class="sbg-card-meta"></span>
+            </div>
+
+            <img id="guideCover" class="sbg-article-cover" alt="" hidden>
+
+            <div id="guideBody" class="sba-article-body"></div>
+
+            <div class="sbg-help-box">
+                <div>
+                    <span class="sbg-help-title">Need help settling in?</span>
+                    <span class="sbg-help-text">Browse local providers for airport pickup, moving, cleaning, translation and more.</span>
+                </div>
+                <a href="services.html" class="sbg-cta-button sbg-cta-button-teal">Find local help</a>
+            </div>
+        </article>
+
+        <!-- MORE GUIDES -->
+        <div id="relatedSection" class="sbg-related" hidden>
+            <h2 class="sbg-section-title">More guides</h2>
+            <div id="relatedGuides" class="sbg-grid"></div>
+        </div>
+
+    </main>
+
+
+        <!-- FOOTER -->
+    <footer>
+
+        <div class="container">
+
+            <div class="footer-content">
+
+                <div class="footer-brand">
+
+                    <a href="index.html" class="logo" style="color: white;">
+                        Settle<span>Bridge</span>
+                    </a>
+
+                    <p>
+                        Arrive with a plan. Settle with confidence.
+                        Connecting newcomers with practical local services.
+                    </p>
+
+                </div>
+
+
+                <div class="footer-column">
+
+                    <h3>Explore</h3>
+
+                    <a href="index.html">Home</a>
+                    <a href="services.html">Find Services</a>
+                    <a href="index.html#how-it-works">How It Works</a>
+                    <a href="become-provider.html">Become a Provider</a>
+
+                </div>
+
+
+                <div class="footer-column">
+
+                    <h3>Support</h3>
+
+                    <a href="help.html">Help Centre</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms and Conditions</a>
+                    <a href="contact.html">Contact Us</a>
+
+                </div>
+
+            </div>
+
+
+            <div class="footer-bottom">
+
+                <p>© 2026 SettleBridge. All rights reserved.</p>
+
+            </div>
+
+        </div>
+
+    </footer>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

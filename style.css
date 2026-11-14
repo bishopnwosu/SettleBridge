@@ -3466,3 +3466,378 @@ textarea.sba-input {
     justify-content: space-between;
     gap: 10px;
 }
+
+
+/* =====================================
+   PUBLIC GUIDES (BLOG) PAGES
+===================================== */
+
+.sbg-main [hidden] {
+    display: none !important;
+}
+
+.nav-links a[aria-current="page"] {
+    color: var(--secondary);
+    font-weight: 700;
+}
+
+.sbg-hero {
+    padding: 56px 0 44px;
+    background: #F4F7FA;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.sbg-hero .container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.sbg-hero h1 {
+    max-width: 720px;
+    font-size: 44px;
+    line-height: 1.15;
+    font-weight: 800;
+    color: #0A3D62;
+    letter-spacing: -0.03em;
+}
+
+.sbg-hero p {
+    max-width: 640px;
+    font-size: 18px;
+    color: #475569;
+}
+
+.sbg-eyebrow {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0E7C66;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.sbg-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.sbg-chip {
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid #CBD5E1;
+    border-radius: 999px;
+    background: #FFFFFF;
+    color: #172B3A;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.sbg-chip.is-active {
+    border-color: #0A3D62;
+    background: #0A3D62;
+    color: #FFFFFF;
+}
+
+.sbg-main {
+    padding-top: 40px;
+    padding-bottom: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.sbg-status {
+    padding: 32px;
+    border-radius: 12px;
+    background: #F4F7FA;
+    text-align: center;
+    color: #475569;
+}
+
+.sbg-section-title {
+    margin-bottom: 20px;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0A3D62;
+}
+
+.sbg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 28px;
+}
+
+/* Guide cards */
+
+.sbg-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    color: inherit;
+}
+
+.sbg-card:hover .sbg-card-title {
+    text-decoration: underline;
+}
+
+.sbg-card:focus-visible,
+.sbg-chip:focus-visible,
+.sbg-cta-button:focus-visible {
+    outline: 3px solid #7FB3D5;
+    outline-offset: 3px;
+}
+
+.sbg-card-cover {
+    height: 190px;
+    border-radius: 14px;
+    background: #E6EEF5;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0A3D62;
+    font-weight: 700;
+}
+
+.sbg-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sbg-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sbg-card-title {
+    font-size: 20px;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #0A3D62;
+}
+
+.sbg-card-summary {
+    font-size: 15px;
+    line-height: 1.55;
+    color: #475569;
+}
+
+.sbg-card-meta {
+    font-size: 13px;
+    color: #475569;
+}
+
+.sbg-card-featured {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 32px;
+}
+
+.sbg-card-featured .sbg-card-cover {
+    flex: 1 1 420px;
+    height: 300px;
+    border-radius: 16px;
+    background: #0A3D62;
+    color: #D6E4EF;
+}
+
+.sbg-card-featured .sbg-card-text {
+    flex: 1 1 380px;
+    gap: 12px;
+}
+
+.sbg-card-featured .sbg-card-title {
+    font-size: 32px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.sbg-card-featured .sbg-card-summary {
+    font-size: 17px;
+}
+
+/* Call to action band */
+
+.sbg-cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 36px 32px;
+    border-radius: 16px;
+    background: #0A3D62;
+}
+
+.sbg-cta h2 {
+    font-size: 26px;
+    font-weight: 800;
+    color: #FFFFFF;
+}
+
+.sbg-cta p {
+    margin-top: 6px;
+    color: #D6E4EF;
+}
+
+.sbg-cta-button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 22px;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #0A3D62;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.sbg-cta-button-dark {
+    background: #0A3D62;
+    color: #FFFFFF;
+}
+
+.sbg-cta-button-teal {
+    background: #0E7C66;
+    color: #FFFFFF;
+}
+
+/* Single guide page */
+
+.sbg-article {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.sbg-breadcrumb {
+    display: flex;
+    gap: 8px;
+    font-size: 14px;
+    color: #475569;
+}
+
+.sbg-breadcrumb a {
+    font-weight: 600;
+    color: #0A3D62;
+}
+
+.sbg-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.sbg-article-head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sbg-article-head h1 {
+    font-size: 42px;
+    line-height: 1.15;
+    font-weight: 800;
+    color: #0A3D62;
+    letter-spacing: -0.03em;
+}
+
+.sbg-article-summary {
+    font-size: 20px;
+    line-height: 1.5;
+    color: #475569;
+}
+
+.sbg-article-cover {
+    width: 100%;
+    max-height: 420px;
+    object-fit: cover;
+    border-radius: 16px;
+}
+
+.sbg-help-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+    padding: 22px;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    background: #F4F7FA;
+}
+
+.sbg-help-box > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 460px;
+}
+
+.sbg-help-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0A3D62;
+}
+
+.sbg-help-text {
+    font-size: 15px;
+    color: #475569;
+}
+
+.sbg-not-found {
+    max-width: 560px;
+    margin: 40px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.sbg-not-found h1 {
+    font-size: 36px;
+    color: #0A3D62;
+}
+
+.sbg-related {
+    padding-top: 36px;
+    border-top: 1px solid #E2E8F0;
+}
+
+@media (max-width: 600px) {
+    .sbg-hero {
+        padding: 40px 0 32px;
+    }
+
+    .sbg-hero h1 {
+        font-size: 32px;
+    }
+
+    .sbg-card-featured .sbg-card-cover {
+        height: 220px;
+    }
+
+    .sbg-card-featured .sbg-card-title {
+        font-size: 26px;
+    }
+
+    .sbg-article-head h1 {
+        font-size: 32px;
+    }
+
+    .sbg-article-summary {
+        font-size: 18px;
+    }
+
+    .sbg-cta {
+        padding: 28px 22px;
+    }
+}

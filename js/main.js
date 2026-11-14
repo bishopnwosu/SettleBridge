@@ -1871,4 +1871,305 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   }
+
+  // =====================================
+  // 13. PUBLIC GUIDES (BLOG) PAGES
+  // =====================================
+  // Visitors can only ever read PUBLISHED guides: the database security rules enforce this.
+
+  const guidesGrid = document.querySelector("#guidesGrid");
+  const guideBody = document.querySelector("#guideBody");
+
+  if (guidesGrid || guideBody) {
+    const guidesSupabase = window.supabase.createClient(
+      "https://jnvirsxymqdginyatyjq.supabase.co",
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
+    );
+
+    const GUIDE_IMAGE_BUCKET = "blog-images";
+    const GUIDE_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+    function formatGuideDate(value) {
+      if (!value) return "";
+
+      return new Date(value).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+
+    function getReadingTime(content) {
+      const words = (content || "").trim().split(/\s+/).filter(Boolean).length;
+      return Math.max(1, Math.round(words / 200)) + " min read";
+    }
+
+    function getGuideImageUrl(path) {
+      return guidesSupabase.storage.from(GUIDE_IMAGE_BUCKET).getPublicUrl(path).data
+        .publicUrl;
+    }
+
+    function getGuideUrl(guide) {
+      return "guide.html?slug=" + encodeURIComponent(guide.slug);
+    }
+
+    // BUILD ONE GUIDE CARD (text is always set with textContent, never as HTML)
+    function buildGuideCard(guide, isFeatured) {
+      const card = document.createElement("a");
+      card.href = getGuideUrl(guide);
+      card.className = "sbg-card" + (isFeatured ? " sbg-card-featured" : "");
+
+      const cover = document.createElement("div");
+      cover.className = "sbg-card-cover";
+
+      if (guide.cover_image_path) {
+        const image = document.createElement("img");
+        image.src = getGuideImageUrl(guide.cover_image_path);
+        image.alt = guide.cover_image_alt || "";
+        image.loading = "lazy";
+        cover.appendChild(image);
+      } else {
+        const placeholder = document.createElement("span");
+        placeholder.textContent = guide.category;
+        cover.appendChild(placeholder);
+      }
+
+      const text = document.createElement("div");
+      text.className = "sbg-card-text";
+
+      const category = document.createElement("span");
+      category.className = "sbg-eyebrow";
+      category.textContent = (isFeatured ? "Latest · " : "") + guide.category;
+
+      const title = document.createElement(isFeatured ? "h2" : "h3");
+      title.className = "sbg-card-title";
+      title.textContent = guide.title;
+
+      const summary = document.createElement("p");
+      summary.className = "sbg-card-summary";
+      summary.textContent = guide.summary || "";
+
+      const meta = document.createElement("span");
+      meta.className = "sbg-card-meta";
+      meta.textContent =
+        formatGuideDate(guide.published_at) + " · " + getReadingTime(guide.content);
+
+      text.appendChild(category);
+      text.appendChild(title);
+      text.appendChild(summary);
+      text.appendChild(meta);
+
+      card.appendChild(cover);
+      card.appendChild(text);
+
+      return card;
+    }
+
+    // ---------- GUIDES LIST PAGE (guides.html) ----------
+    if (guidesGrid) {
+      const guidesStatus = document.querySelector("#guidesStatus");
+      const featuredGuide = document.querySelector("#featuredGuide");
+      const guidesGridSection = document.querySelector("#guidesGridSection");
+      const guidesGridHeading = document.querySelector("#guidesGridHeading");
+      const topicChips = document.querySelectorAll("[data-topic]");
+
+      let publishedGuides = [];
+      let currentTopic = "All";
+
+      function renderGuides() {
+        featuredGuide.replaceChildren();
+        guidesGrid.replaceChildren();
+
+        if (publishedGuides.length === 0) {
+          guidesStatus.textContent = "Guides are on the way. Please check back soon.";
+          guidesStatus.hidden = false;
+          guidesGridSection.hidden = true;
+          return;
+        }
+
+        let gridGuides;
+
+        if (currentTopic === "All") {
+          // Newest guide large at the top, the rest in the grid
+          featuredGuide.appendChild(buildGuideCard(publishedGuides[0], true));
+          gridGuides = publishedGuides.slice(1);
+          guidesGridHeading.textContent = "More guides";
+        } else {
+          gridGuides = publishedGuides.filter(function (guide) {
+            return guide.category === currentTopic;
+          });
+          guidesGridHeading.textContent = currentTopic;
+        }
+
+        gridGuides.forEach(function (guide) {
+          guidesGrid.appendChild(buildGuideCard(guide, false));
+        });
+
+        guidesGridSection.hidden = gridGuides.length === 0;
+
+        if (currentTopic !== "All" && gridGuides.length === 0) {
+          guidesStatus.textContent = "No guides in this topic yet. More are on the way.";
+          guidesStatus.hidden = false;
+        } else {
+          guidesStatus.hidden = true;
+        }
+      }
+
+      topicChips.forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          currentTopic = chip.dataset.topic;
+
+          topicChips.forEach(function (otherChip) {
+            const isActive = otherChip === chip;
+            otherChip.classList.toggle("is-active", isActive);
+            otherChip.setAttribute("aria-pressed", String(isActive));
+          });
+
+          renderGuides();
+        });
+      });
+
+      guidesSupabase
+        .from("blog_posts")
+        .select(
+          "title, slug, summary, content, category, cover_image_path, cover_image_alt, published_at",
+        )
+        .eq("status", "published")
+        .order("published_at", { ascending: false })
+        .limit(100)
+        .then(function (result) {
+          if (result.error) {
+            console.error("Guides error:", result.error);
+            guidesStatus.textContent =
+              "Sorry, we could not load the guides. Please check your connection and try again.";
+            return;
+          }
+
+          publishedGuides = result.data || [];
+          renderGuides();
+        });
+    }
+
+    // ---------- SINGLE GUIDE PAGE (guide.html) ----------
+    if (guideBody) {
+      const guideStatus = document.querySelector("#guideStatus");
+      const guideArticle = document.querySelector("#guideArticle");
+      const guideNotFound = document.querySelector("#guideNotFound");
+      const relatedSection = document.querySelector("#relatedSection");
+      const relatedGuides = document.querySelector("#relatedGuides");
+
+      const slug = new URLSearchParams(window.location.search).get("slug") || "";
+
+      function showGuideNotFound() {
+        guideStatus.hidden = true;
+        guideNotFound.hidden = false;
+        document.title = "Guide not found | SettleBridge";
+      }
+
+      function setMetaDescription(text) {
+        const meta = document.querySelector('meta[name="description"]');
+        if (meta && text) meta.setAttribute("content", text);
+      }
+
+      async function loadRelatedGuides(guide) {
+        const { data, error } = await guidesSupabase
+          .from("blog_posts")
+          .select(
+            "title, slug, summary, content, category, cover_image_path, cover_image_alt, published_at",
+          )
+          .eq("status", "published")
+          .neq("slug", guide.slug)
+          .order("published_at", { ascending: false })
+          .limit(12);
+
+        if (error || !data || data.length === 0) return;
+
+        // Same topic first, then the newest others
+        const sameTopic = data.filter(function (item) {
+          return item.category === guide.category;
+        });
+        const otherTopics = data.filter(function (item) {
+          return item.category !== guide.category;
+        });
+
+        sameTopic
+          .concat(otherTopics)
+          .slice(0, 3)
+          .forEach(function (item) {
+            relatedGuides.appendChild(buildGuideCard(item, false));
+          });
+
+        relatedSection.hidden = false;
+      }
+
+      async function loadGuide() {
+        if (!GUIDE_SLUG_PATTERN.test(slug)) {
+          showGuideNotFound();
+          return;
+        }
+
+        const { data: guide, error } = await guidesSupabase
+          .from("blog_posts")
+          .select(
+            "title, slug, summary, content, category, cover_image_path, cover_image_alt, published_at",
+          )
+          .eq("slug", slug)
+          .eq("status", "published")
+          .maybeSingle();
+
+        if (error) {
+          console.error("Guide error:", error);
+          guideStatus.textContent =
+            "Sorry, we could not load this guide. Please check your connection and try again.";
+          return;
+        }
+
+        if (!guide) {
+          showGuideNotFound();
+          return;
+        }
+
+        // Page title and Google description
+        document.title = guide.title + " | SettleBridge";
+        setMetaDescription(guide.summary);
+
+        // Heading
+        document.querySelector("#guideBreadcrumbCategory").textContent = guide.category;
+        document.querySelector("#guideCategory").textContent = guide.category;
+        document.querySelector("#guideTitle").textContent = guide.title;
+        document.querySelector("#guideSummary").textContent = guide.summary || "";
+        document.querySelector("#guideMeta").textContent =
+          "By the SettleBridge team · " +
+          formatGuideDate(guide.published_at) +
+          " · " +
+          getReadingTime(guide.content);
+
+        // Cover image
+        const cover = document.querySelector("#guideCover");
+        if (guide.cover_image_path) {
+          cover.src = getGuideImageUrl(guide.cover_image_path);
+          cover.alt = guide.cover_image_alt || "";
+          cover.hidden = false;
+        }
+
+        // Content: Markdown turned into HTML, then cleaned by DOMPurify
+        if (window.marked && window.DOMPurify) {
+          guideBody.innerHTML = window.DOMPurify.sanitize(
+            window.marked.parse(guide.content || ""),
+          );
+        } else {
+          // The Markdown tools did not load: show plain text, which is always safe
+          guideBody.textContent = guide.content || "";
+          guideBody.style.whiteSpace = "pre-line";
+        }
+
+        guideStatus.hidden = true;
+        guideArticle.hidden = false;
+
+        loadRelatedGuides(guide);
+      }
+
+      loadGuide();
+    }
+  }
 });
