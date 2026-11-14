@@ -4269,3 +4269,141 @@ textarea.sba-input {
         font-size: 22px;
     }
 }
+
+
+/* =====================================
+   SERVICES PAGE: PROVIDER LISTINGS
+===================================== */
+
+.services-results [hidden],
+.filter-sidebar [hidden] {
+    display: none !important;
+}
+
+.filter-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.filter-heading h3 {
+    margin-bottom: 0;
+}
+
+.filter-clear {
+    min-height: 32px;
+    border: 0;
+    background: none;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+fieldset.filter-group {
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    margin: 0;
+    min-width: 0;
+}
+
+fieldset.filter-group:last-child {
+    border-bottom: none;
+}
+
+.filter-group legend {
+    float: left;
+    width: 100%;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.filter-group legend + div {
+    clear: both;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.filter-option {
+    cursor: pointer;
+}
+
+.filter-count {
+    margin-left: auto;
+    min-width: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #EEF2F6;
+    color: #475569;
+    font-size: 12px;
+    text-align: center;
+}
+
+.provider-card .service-card-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.provider-card h3 a {
+    color: inherit;
+}
+
+.provider-card h3 a:hover {
+    text-decoration: underline;
+}
+
+.provider-card .provider-location {
+    margin-bottom: 10px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.provider-languages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 15px;
+    list-style: none;
+}
+
+.provider-languages li {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #E6EEF5;
+    color: #0A3D62;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.provider-card .service-meta {
+    margin-top: auto;
+}
+
+.provider-profile-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 6px;
+    background: var(--secondary);
+    color: var(--white);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.provider-profile-link:hover {
+    background: #11866F;
+}
+
+.provider-card a:focus-visible,
+.filter-option input:focus-visible,
+.filter-clear:focus-visible {
+    outline: 3px solid #7FB3D5;
+    outline-offset: 2px;
+}

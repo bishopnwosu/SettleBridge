@@ -2697,4 +2697,455 @@ document.addEventListener("DOMContentLoaded", function () {
       loadGuide();
     }
   }
+
+  // =====================================
+  // 14. SERVICES PAGE: APPROVED PROVIDERS
+  // =====================================
+  // Shows only LISTED providers (the database security rules enforce this).
+  // Provider email, phone and WhatsApp are never loaded here.
+
+  const providerList = document.querySelector("#providerList");
+
+  if (providerList) {
+    const servicesSupabase = window.supabase.createClient(
+      "https://jnvirsxymqdginyatyjq.supabase.co",
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
+    );
+
+    const providerSearchForm = document.querySelector("#providerSearchForm");
+    const providerKeyword = document.querySelector("#providerKeyword");
+    const providerCitySelect = document.querySelector("#providerCitySelect");
+    const providerSort = document.querySelector("#providerSort");
+    const providerResultsCount = document.querySelector("#providerResultsCount");
+    const categoryFilters = document.querySelector("#categoryFilters");
+    const cityFilters = document.querySelector("#cityFilters");
+    const languageFilters = document.querySelector("#languageFilters");
+    const clearProviderFilters = document.querySelector("#clearProviderFilters");
+    const clearProviderFiltersEmpty = document.querySelector("#clearProviderFiltersEmpty");
+    const providersEmpty = document.querySelector("#providersEmpty");
+    const providersNoMatch = document.querySelector("#providersNoMatch");
+    const providersError = document.querySelector("#providersError");
+
+    let allProviders = [];
+    let categoriesById = {};
+    const selectedCategories = new Set(); // category slugs
+    const selectedCities = new Set(); // lowercase city names
+    const selectedLanguages = new Set(); // lowercase languages
+
+    // SMALL HELPERS
+    function normaliseWord(text) {
+      return (text || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "");
+    }
+
+    function capitalise(text) {
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+
+    // "Portuguese, English and French" -> ["portuguese", "english", "french"]
+    function getLanguages(provider) {
+      return (provider.languages || "")
+        .split(/,|;|\/|\band\b|&/i)
+        .map(normaliseWord)
+        .filter(Boolean);
+    }
+
+    function formatEuros(amount) {
+      const value = Number(amount);
+
+      return new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+      }).format(value);
+    }
+
+    function getPriceText(provider) {
+      const hasPrice = provider.base_price !== null && provider.base_price !== undefined;
+
+      if (provider.pricing_type === "quote" || !hasPrice) return "Price on request";
+      if (provider.pricing_type === "hourly") return formatEuros(provider.base_price) + " per hour";
+      return "From " + formatEuros(provider.base_price);
+    }
+
+    function shortenText(text, maxLength) {
+      const clean = (text || "").replace(/\s+/g, " ").trim();
+      return clean.length > maxLength ? clean.slice(0, maxLength - 1).trimEnd() + "…" : clean;
+    }
+
+    function getCategory(provider) {
+      return categoriesById[provider.category_id] || null;
+    }
+
+    // BUILD A CHECKBOX FILTER
+    function buildCheckbox(container, name, value, labelText, count, selectedSet) {
+      const label = document.createElement("label");
+      label.className = "filter-option";
+
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = name;
+      input.value = value;
+      input.checked = selectedSet.has(value);
+
+      input.addEventListener("change", function () {
+        if (input.checked) {
+          selectedSet.add(value);
+        } else {
+          selectedSet.delete(value);
+        }
+
+        if (name === "location") syncCitySelect();
+        renderProviders();
+      });
+
+      const text = document.createElement("span");
+      text.textContent = labelText;
+
+      const countBadge = document.createElement("span");
+      countBadge.className = "filter-count";
+      countBadge.textContent = count;
+
+      label.appendChild(input);
+      label.appendChild(text);
+      label.appendChild(countBadge);
+      container.appendChild(label);
+    }
+
+    // FILL THE FILTERS FROM THE REAL DATA
+    function buildFilters(categories) {
+      categoryFilters.replaceChildren();
+      cityFilters.replaceChildren();
+      languageFilters.replaceChildren();
+
+      // Categories (every category, with how many providers are in it)
+      categories.forEach(function (category) {
+        const count = allProviders.filter(function (provider) {
+          return provider.category_id === category.id;
+        }).length;
+
+        buildCheckbox(categoryFilters, "category", category.slug, category.name, count, selectedCategories);
+      });
+
+      // Cities (only cities that have providers)
+      const cityCounts = {};
+      const cityNames = {};
+
+      allProviders.forEach(function (provider) {
+        const key = normaliseWord(provider.city);
+        if (!key) return;
+        cityCounts[key] = (cityCounts[key] || 0) + 1;
+        cityNames[key] = cityNames[key] || provider.city.trim();
+      });
+
+      Object.keys(cityNames)
+        .sort()
+        .forEach(function (key) {
+          buildCheckbox(cityFilters, "location", key, cityNames[key], cityCounts[key], selectedCities);
+        });
+
+      if (Object.keys(cityNames).length === 0) {
+        cityFilters.textContent = "No locations yet.";
+      }
+
+      // City dropdown in the search bar
+      const previousCity = providerCitySelect.value;
+      providerCitySelect.replaceChildren();
+
+      const allOption = document.createElement("option");
+      allOption.value = "";
+      allOption.textContent = "All locations";
+      providerCitySelect.appendChild(allOption);
+
+      Object.keys(cityNames)
+        .sort()
+        .forEach(function (key) {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = cityNames[key];
+          providerCitySelect.appendChild(option);
+        });
+
+      providerCitySelect.value = previousCity;
+      syncCitySelect();
+
+      // Languages (from what providers wrote)
+      const languageCounts = {};
+
+      allProviders.forEach(function (provider) {
+        new Set(getLanguages(provider)).forEach(function (language) {
+          languageCounts[language] = (languageCounts[language] || 0) + 1;
+        });
+      });
+
+      Object.keys(languageCounts)
+        .sort()
+        .forEach(function (language) {
+          buildCheckbox(
+            languageFilters,
+            "language",
+            language,
+            capitalise(language),
+            languageCounts[language],
+            selectedLanguages,
+          );
+        });
+
+      if (Object.keys(languageCounts).length === 0) {
+        languageFilters.textContent = "No languages yet.";
+      }
+    }
+
+    // Keep the search bar's city dropdown in step with the Location checkboxes
+    function syncCitySelect() {
+      providerCitySelect.value =
+        selectedCities.size === 1 ? Array.from(selectedCities)[0] : "";
+    }
+
+    // APPLY SEARCH, FILTERS AND SORTING
+    function getFilteredProviders() {
+      const keyword = normaliseWord(providerKeyword.value);
+
+      const filtered = allProviders.filter(function (provider) {
+        const category = getCategory(provider);
+
+        if (selectedCategories.size > 0 && !(category && selectedCategories.has(category.slug))) {
+          return false;
+        }
+
+        if (selectedCities.size > 0 && !selectedCities.has(normaliseWord(provider.city))) {
+          return false;
+        }
+
+        if (selectedLanguages.size > 0) {
+          const languages = getLanguages(provider);
+          const speaksOne = languages.some(function (language) {
+            return selectedLanguages.has(language);
+          });
+          if (!speaksOne) return false;
+        }
+
+        if (keyword) {
+          const searchable = normaliseWord(
+            [
+              provider.business_name,
+              provider.description,
+              provider.service_area,
+              provider.city,
+              category ? category.name : "",
+            ].join(" "),
+          );
+          if (searchable.indexOf(keyword) === -1) return false;
+        }
+
+        return true;
+      });
+
+      const sort = providerSort.value;
+
+      return filtered.sort(function (a, b) {
+        if (sort === "newest") return new Date(b.created_at) - new Date(a.created_at);
+
+        // Providers without a price ("Price on request") always go last
+        const priceA = a.pricing_type === "quote" || a.base_price === null ? null : Number(a.base_price);
+        const priceB = b.pricing_type === "quote" || b.base_price === null ? null : Number(b.base_price);
+
+        if (priceA === null && priceB === null) return 0;
+        if (priceA === null) return 1;
+        if (priceB === null) return -1;
+
+        return sort === "price-low" ? priceA - priceB : priceB - priceA;
+      });
+    }
+
+    // BUILD ONE PROVIDER CARD (all text set with textContent, never as HTML)
+    function buildProviderCard(provider) {
+      const profileUrl = "provider.html?slug=" + encodeURIComponent(provider.slug);
+      const category = getCategory(provider);
+
+      const card = document.createElement("article");
+      card.className = "service-card provider-card";
+
+      const content = document.createElement("div");
+      content.className = "service-card-content";
+
+      const categoryLabel = document.createElement("span");
+      categoryLabel.className = "service-category";
+      categoryLabel.textContent = category ? category.name : "Service";
+
+      const title = document.createElement("h3");
+      const titleLink = document.createElement("a");
+      titleLink.href = profileUrl;
+      titleLink.textContent = provider.business_name;
+      title.appendChild(titleLink);
+
+      const location = document.createElement("p");
+      location.className = "provider-location";
+      const sameAsCity = normaliseWord(provider.service_area) === normaliseWord(provider.city);
+      location.textContent = [provider.city, sameAsCity ? "" : provider.service_area]
+        .filter(Boolean)
+        .join(" · ");
+
+      const description = document.createElement("p");
+      description.textContent = shortenText(provider.description, 150);
+
+      content.appendChild(categoryLabel);
+      content.appendChild(title);
+      if (location.textContent) content.appendChild(location);
+      content.appendChild(description);
+
+      const languages = getLanguages(provider);
+      if (languages.length > 0) {
+        const languageList = document.createElement("ul");
+        languageList.className = "provider-languages";
+        languageList.setAttribute("aria-label", "Languages spoken");
+
+        languages.slice(0, 4).forEach(function (language) {
+          const item = document.createElement("li");
+          item.textContent = capitalise(language);
+          languageList.appendChild(item);
+        });
+
+        content.appendChild(languageList);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "service-meta";
+
+      const price = document.createElement("span");
+      price.className = "service-price";
+      price.textContent = getPriceText(provider);
+
+      const profileLink = document.createElement("a");
+      profileLink.href = profileUrl;
+      profileLink.className = "provider-profile-link";
+      profileLink.textContent = "View profile";
+      profileLink.setAttribute("aria-label", "View profile: " + provider.business_name);
+
+      meta.appendChild(price);
+      meta.appendChild(profileLink);
+      content.appendChild(meta);
+
+      card.appendChild(content);
+      return card;
+    }
+
+    // SHOW THE RESULTS
+    function renderProviders() {
+      const providers = getFilteredProviders();
+      const hasFilters =
+        selectedCategories.size > 0 ||
+        selectedCities.size > 0 ||
+        selectedLanguages.size > 0 ||
+        providerKeyword.value.trim() !== "";
+
+      providerList.replaceChildren();
+      providers.forEach(function (provider) {
+        providerList.appendChild(buildProviderCard(provider));
+      });
+
+      providersEmpty.hidden = allProviders.length > 0;
+      providersNoMatch.hidden = allProviders.length === 0 || providers.length > 0;
+      providerList.hidden = providers.length === 0;
+      clearProviderFilters.hidden = !hasFilters;
+
+      providerResultsCount.textContent =
+        allProviders.length === 0
+          ? "New providers are being reviewed."
+          : providers.length + (providers.length === 1 ? " provider found." : " providers found.");
+
+      // Keep the address bar up to date, so a search can be shared or bookmarked
+      const params = new URLSearchParams();
+      if (providerKeyword.value.trim()) params.set("service", providerKeyword.value.trim());
+      if (selectedCities.size === 1) params.set("city", Array.from(selectedCities)[0]);
+      if (selectedCategories.size === 1) params.set("category", Array.from(selectedCategories)[0]);
+
+      const query = params.toString();
+      window.history.replaceState(null, "", "services.html" + (query ? "?" + query : ""));
+    }
+
+    function clearAllFilters() {
+      selectedCategories.clear();
+      selectedCities.clear();
+      selectedLanguages.clear();
+      providerKeyword.value = "";
+
+      document
+        .querySelectorAll(".filter-sidebar input[type='checkbox']")
+        .forEach(function (checkbox) {
+          checkbox.checked = false;
+        });
+
+      syncCitySelect();
+      renderProviders();
+    }
+
+    // SEARCH BAR, SORTING AND CLEAR BUTTONS
+    providerSearchForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      renderProviders();
+    });
+
+    providerKeyword.addEventListener("input", renderProviders);
+
+    providerCitySelect.addEventListener("change", function () {
+      selectedCities.clear();
+      if (providerCitySelect.value) selectedCities.add(providerCitySelect.value);
+
+      cityFilters.querySelectorAll("input").forEach(function (checkbox) {
+        checkbox.checked = selectedCities.has(checkbox.value);
+      });
+
+      renderProviders();
+    });
+
+    providerSort.addEventListener("change", renderProviders);
+    clearProviderFilters.addEventListener("click", clearAllFilters);
+    clearProviderFiltersEmpty.addEventListener("click", clearAllFilters);
+
+    // READ A SEARCH FROM THE ADDRESS BAR (for example from the home page search)
+    const startParams = new URLSearchParams(window.location.search);
+    providerKeyword.value = startParams.get("service") || startParams.get("keyword") || "";
+    if (startParams.get("city")) selectedCities.add(normaliseWord(startParams.get("city")));
+    if (startParams.get("category")) selectedCategories.add(startParams.get("category"));
+
+    // LOAD CATEGORIES AND PROVIDERS
+    Promise.all([
+      servicesSupabase
+        .from("service_categories")
+        .select("id, name, slug")
+        .order("name", { ascending: true }),
+      servicesSupabase
+        .from("providers")
+        .select(
+          "business_name, slug, category_id, city, description, languages, service_area, pricing_type, base_price, created_at",
+        )
+        .eq("is_listed", true)
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ]).then(function (results) {
+      const categoryResult = results[0];
+      const providerResult = results[1];
+
+      if (categoryResult.error || providerResult.error) {
+        console.error("Services error:", categoryResult.error || providerResult.error);
+        providersError.hidden = false;
+        providerResultsCount.textContent = "";
+        return;
+      }
+
+      categoriesById = {};
+      (categoryResult.data || []).forEach(function (category) {
+        categoriesById[category.id] = category;
+      });
+
+      allProviders = providerResult.data || [];
+
+      buildFilters(categoryResult.data || []);
+      renderProviders();
+    });
+  }
 });

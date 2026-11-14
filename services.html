@@ -88,22 +88,19 @@
     <section style="padding-top: 0; padding-bottom: 35px;">
         <div class="container">
 
-            <form class="services-search">
+            <form class="services-search" id="providerSearchForm" role="search">
 
                 <input
                     type="search"
+                    id="providerKeyword"
                     name="keyword"
                     placeholder="What service are you looking for?"
                     aria-label="Search services"
+                    autocomplete="off"
                 >
 
-                <select name="city" aria-label="Choose a city">
+                <select id="providerCitySelect" name="city" aria-label="Choose a city">
                     <option value="">All locations</option>
-                    <option value="lisbon">Lisbon</option>
-                    <option value="porto">Porto</option>
-                    <option value="braga">Braga</option>
-                    <option value="coimbra">Coimbra</option>
-                    <option value="faro">Faro</option>
                 </select>
 
                 <button type="submit" class="btn btn-primary">
@@ -123,99 +120,27 @@
             <div class="services-layout">
 
                 <!-- FILTER SIDEBAR -->
-                <aside class="filter-sidebar">
+                <aside class="filter-sidebar" aria-label="Filter services">
 
-                    <h3>Filter Services</h3>
-
-                    <div class="filter-group">
-
-                        <h4>Service Categories</h4>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="category" value="airport-pickup">
-                            Airport Pickup
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="category" value="cleaning">
-                            Home and Cleaning
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="category" value="moving">
-                            Moving Assistance
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="category" value="translation">
-                            Translation Services
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="category" value="local-assistance">
-                            Local Assistance
-                        </label>
-
+                    <div class="filter-heading">
+                        <h3>Filter Services</h3>
+                        <button type="button" id="clearProviderFilters" class="filter-clear" hidden>Clear all</button>
                     </div>
 
+                    <fieldset class="filter-group">
+                        <legend>Service Categories</legend>
+                        <div id="categoryFilters"></div>
+                    </fieldset>
 
-                    <div class="filter-group">
+                    <fieldset class="filter-group">
+                        <legend>Locations</legend>
+                        <div id="cityFilters"></div>
+                    </fieldset>
 
-                        <h4>Locations</h4>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="location" value="lisbon">
-                            Lisbon
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="location" value="porto">
-                            Porto
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="location" value="braga">
-                            Braga
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="location" value="coimbra">
-                            Coimbra
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="location" value="faro">
-                            Faro
-                        </label>
-
-                    </div>
-
-
-                    <div class="filter-group">
-
-                        <h4>Languages</h4>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="language" value="english">
-                            English
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="language" value="portuguese">
-                            Portuguese
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="language" value="french">
-                            French
-                        </label>
-
-                        <label class="filter-option">
-                            <input type="checkbox" name="language" value="french">
-                            Dutch
-                        </label>
-
-                    </div>
+                    <fieldset class="filter-group">
+                        <legend>Languages</legend>
+                        <div id="languageFilters"></div>
+                    </fieldset>
 
                 </aside>
 
@@ -227,24 +152,24 @@
 
                         <div>
                             <h2>Available Services</h2>
-                            <p>
-                                Explore services from local providers.
-                            </p>
+                            <p id="providerResultsCount" aria-live="polite">Loading providers...</p>
                         </div>
 
-                        <select name="sort" aria-label="Sort services">
-                            <option value="recommended">Recommended</option>
+                        <select id="providerSort" name="sort" aria-label="Sort services">
+                            <option value="newest">Newest first</option>
                             <option value="price-low">Price: Low to High</option>
                             <option value="price-high">Price: High to Low</option>
                         </select>
 
                     </div>
 
+                    <!-- PROVIDER CARDS (filled in by js/main.js) -->
+                    <div id="providerList" class="service-list"></div>
 
-                    <!-- EMPTY STATE: REPLACE WHEN APPROVED PROVIDERS JOIN -->
-                    <div class="empty-state">
+                    <!-- NO PROVIDERS YET -->
+                    <div id="providersEmpty" class="empty-state" hidden>
 
-                        <div class="empty-state-icon">⌕</div>
+                        <div class="empty-state-icon" aria-hidden="true">⌕</div>
 
                         <h3>We're Building Our Provider Network</h3>
 
@@ -257,6 +182,33 @@
                         <a href="become-provider.html" class="btn btn-primary">
                             Become a Provider
                         </a>
+
+                    </div>
+
+                    <!-- NOTHING MATCHES THE FILTERS -->
+                    <div id="providersNoMatch" class="empty-state" hidden>
+
+                        <h3>No providers match your search</h3>
+
+                        <p>
+                            Try another city or category, or clear your filters
+                            to see every provider.
+                        </p>
+
+                        <button type="button" id="clearProviderFiltersEmpty" class="btn btn-primary">
+                            Clear filters
+                        </button>
+
+                    </div>
+
+                    <!-- LOADING ERROR -->
+                    <div id="providersError" class="empty-state" role="alert" hidden>
+
+                        <h3>We could not load providers</h3>
+
+                        <p>
+                            Please check your internet connection and refresh the page.
+                        </p>
 
                     </div>
 
@@ -347,6 +299,7 @@
 
     </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
