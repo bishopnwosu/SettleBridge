@@ -1235,9 +1235,40 @@ document.addEventListener("DOMContentLoaded", function () {
     const coverRemoveButton = byId("coverRemoveButton");
     const coverAlt = byId("coverAlt");
 
-    const seoUrl = byId("seoUrl");
-    const seoTitle = byId("seoTitle");
-    const seoSummary = byId("seoSummary");
+    const seoScoreButton = byId("seoScoreButton");
+    const seoScoreTop = byId("seoScoreTop");
+    const headlineScoreButton = byId("headlineScoreButton");
+    const headlineScoreTop = byId("headlineScoreTop");
+    const serpBox = byId("serpBox");
+    const serpDesktop = byId("serpDesktop");
+    const serpMobile = byId("serpMobile");
+    const serpUrl = byId("serpUrl");
+    const serpTitle = byId("serpTitle");
+    const serpDescription = byId("serpDescription");
+    const seoTitleInput = byId("seoTitle");
+    const seoTitleCount = byId("seoTitleCount");
+    const metaDescriptionInput = byId("metaDescription");
+    const metaDescriptionCount = byId("metaDescriptionCount");
+    const focusKeyphraseInput = byId("focusKeyphrase");
+    const seoChecklist = byId("seoChecklist");
+    const seoScoreBadge = byId("seoScoreBadge");
+    const headlineChecklist = byId("headlineChecklist");
+    const headlineScoreBadge = byId("headlineScoreBadge");
+    const headlinePreview = byId("headlinePreview");
+    const headlineStats = byId("headlineStats");
+    const headlineStart = byId("headlineStart");
+    const headlineEnd = byId("headlineEnd");
+    const socialPreviewImage = byId("socialPreviewImage");
+    const socialPreviewPlaceholder = byId("socialPreviewPlaceholder");
+    const socialPreviewTitle = byId("socialPreviewTitle");
+    const socialPreviewDescription = byId("socialPreviewDescription");
+    const socialInput = byId("socialInput");
+    const socialUploadButton = byId("socialUploadButton");
+    const socialRemoveButton = byId("socialRemoveButton");
+    const socialTitleInput = byId("socialTitle");
+    const socialTitleCount = byId("socialTitleCount");
+    const socialDescriptionInput = byId("socialDescription");
+    const socialDescriptionCount = byId("socialDescriptionCount");
 
     const deleteCard = byId("deleteCard");
     const deleteStart = byId("deleteStart");
@@ -1250,6 +1281,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let postId = new URLSearchParams(window.location.search).get("id");
     let savedPost = null; // the guide exactly as it is in the database
     let coverImagePath = null; // the image currently shown in the editor
+    let socialImagePath = null; // the share image (WhatsApp, Facebook, LinkedIn)
     let imagesToDelete = []; // old images to remove after the next successful save
     let slugEditedByHand = false;
     let hasUnsavedChanges = false;
@@ -1312,12 +1344,401 @@ document.addEventListener("DOMContentLoaded", function () {
         unpublishButton,
         coverUploadButton,
         coverRemoveButton,
+        socialUploadButton,
+        socialRemoveButton,
         deleteButton,
         deleteConfirmButton,
         deleteCancelButton,
       ].forEach(function (button) {
         button.disabled = busy;
       });
+    }
+
+    // ---------- SEO PANEL ----------
+    const SITE_NAME = "SettleBridge";
+    const SEPARATOR = "|";
+
+    const POWER_WORDS = [
+      "essential", "easy", "simple", "complete", "practical", "proven", "quick",
+      "step-by-step", "best", "avoid", "mistakes", "free", "ultimate", "first",
+      "everything", "safe", "smart", "fast", "new", "need",
+    ];
+
+    // Lowercase and remove accents, so "Ação" matches "acao"
+    function normaliseText(text) {
+      return (text || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "");
+    }
+
+    // Replace {title}, {summary}, {sep} and {site} with real text
+    function fillTags(template) {
+      return template
+        .replace(/\{title\}/g, postTitle.value.trim())
+        .replace(/\{summary\}/g, postSummary.value.trim())
+        .replace(/\{sep\}/g, SEPARATOR)
+        .replace(/\{site\}/g, SITE_NAME)
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function getFinalSeoTitle() {
+      return fillTags(seoTitleInput.value.trim() || "{title} {sep} {site}");
+    }
+
+    function getFinalMetaDescription() {
+      return fillTags(metaDescriptionInput.value.trim() || "{summary}");
+    }
+
+    function shorten(text, maxLength) {
+      return text.length > maxLength ? text.slice(0, maxLength - 1).trimEnd() + "…" : text;
+    }
+
+    function getPlainContent() {
+      return postContent.value
+        .replace(/```[\s\S]*?```/g, " ")
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+        .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+        .replace(/[#>*_`~-]/g, " ");
+    }
+
+    function countWords(text) {
+      return text.trim().split(/\s+/).filter(Boolean).length;
+    }
+
+    function getFirstParagraph() {
+      const blocks = postContent.value.split(/\n\s*\n/);
+      const first = blocks.find(function (block) {
+        return block.trim() && !/^\s*#/.test(block);
+      });
+      return first || "";
+    }
+
+    function getSubheadings() {
+      return (postContent.value.match(/^#{2,3}\s+.+$/gm) || []).map(function (line) {
+        return line.replace(/^#+\s+/, "");
+      });
+    }
+
+    function scoreClass(score) {
+      if (score >= 70) return "is-good";
+      if (score >= 40) return "is-ok";
+      return "is-poor";
+    }
+
+    // "52 out of 60 recommended characters"
+    function showLength(element, length, low, high) {
+      element.textContent = length + " out of " + high + " recommended characters.";
+      element.className =
+        "sba-length-note " + (length === 0 ? "" : length < low || length > high ? "is-warning" : "is-good");
+    }
+
+    function renderChecklist(listElement, checks) {
+      listElement.replaceChildren();
+
+      checks.forEach(function (check) {
+        const item = document.createElement("li");
+        item.className = check.passed ? "is-passed" : "is-failed";
+
+        const icon = document.createElement("span");
+        icon.className = "sba-check-icon";
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = check.passed ? "✓" : "!";
+
+        const label = document.createElement("span");
+        label.className = "sba-visually-hidden";
+        label.textContent = check.passed ? "Done: " : "To improve: ";
+
+        const text = document.createElement("span");
+        text.textContent = check.text;
+
+        item.appendChild(icon);
+        item.appendChild(label);
+        item.appendChild(text);
+        listElement.appendChild(item);
+      });
+    }
+
+    function sumScore(checks) {
+      return checks.reduce(function (total, check) {
+        return total + (check.passed ? check.points : 0);
+      }, 0);
+    }
+
+    // SEO CHECKS: our own simple checklist (not Google's ranking formula)
+    function getSeoChecks() {
+      const keyphrase = normaliseText(focusKeyphraseInput.value.trim());
+      const hasKeyphrase = keyphrase.length > 0;
+      const seoTitleText = getFinalSeoTitle();
+      const metaText = getFinalMetaDescription();
+      const wordCount = countWords(getPlainContent());
+      const subheadings = getSubheadings();
+
+      function contains(text) {
+        return hasKeyphrase && normaliseText(text).indexOf(keyphrase) !== -1;
+      }
+
+      const keyphraseSlug = makeSlug(focusKeyphraseInput.value);
+
+      return [
+        {
+          points: 10,
+          passed: hasKeyphrase,
+          text: hasKeyphrase ? "Focus keyphrase is set." : "Add a focus keyphrase.",
+        },
+        {
+          points: 15,
+          passed: contains(seoTitleText),
+          text: "Use the keyphrase in the SEO title.",
+        },
+        {
+          points: 10,
+          passed: contains(metaText),
+          text: "Use the keyphrase in the meta description.",
+        },
+        {
+          points: 10,
+          passed: hasKeyphrase && keyphraseSlug !== "" && postSlug.value.indexOf(keyphraseSlug) !== -1,
+          text: "Use the keyphrase in the web address.",
+        },
+        {
+          points: 10,
+          passed: contains(getFirstParagraph()),
+          text: "Use the keyphrase in the first paragraph.",
+        },
+        {
+          points: 5,
+          passed: subheadings.some(contains),
+          text: "Use the keyphrase in at least one subheading.",
+        },
+        {
+          points: 10,
+          passed: seoTitleText.length >= 30 && seoTitleText.length <= 60,
+          text: "Keep the SEO title between 30 and 60 characters (now " + seoTitleText.length + ").",
+        },
+        {
+          points: 10,
+          passed: metaText.length >= 120 && metaText.length <= 160,
+          text: "Keep the meta description between 120 and 160 characters (now " + metaText.length + ").",
+        },
+        {
+          points: 10,
+          passed: wordCount >= 300,
+          text: "Write at least 300 words (now " + wordCount + ").",
+        },
+        {
+          points: 5,
+          passed: subheadings.length > 0,
+          text: "Break the text up with subheadings (## Heading).",
+        },
+        {
+          points: 5,
+          passed: !!coverImagePath && coverAlt.value.trim().length > 0,
+          text: "Add a cover image with a description.",
+        },
+      ];
+    }
+
+    // HEADLINE CHECKS
+    function getHeadlineChecks() {
+      const title = postTitle.value.trim();
+      const words = title.split(/\s+/).filter(Boolean);
+      const lower = normaliseText(title);
+      const lettersOnly = title.replace(/[^A-Za-z]/g, "");
+
+      const isHowToOrList =
+        /^(how|what|why|when|where|which|who)\b/.test(lower) ||
+        /\b(guide|checklist|tips|steps|ways|mistakes|things)\b/.test(lower) ||
+        title.indexOf("?") !== -1;
+
+      const hasPowerWord = POWER_WORDS.some(function (word) {
+        return new RegExp("\\b" + word.replace("-", "\\-") + "\\b").test(lower);
+      });
+
+      return [
+        {
+          points: 25,
+          passed: title.length >= 40 && title.length <= 60,
+          text: "Aim for 40 to 60 characters (now " + title.length + ").",
+        },
+        {
+          points: 20,
+          passed: words.length >= 6 && words.length <= 12,
+          text: "Aim for 6 to 12 words (now " + words.length + ").",
+        },
+        {
+          points: 15,
+          passed: isHowToOrList,
+          text: "Use a clear type: \"How to…\", a question, a checklist or a list of tips.",
+        },
+        {
+          points: 15,
+          passed: hasPowerWord,
+          text: "Add a helpful word such as \"easy\", \"essential\", \"step-by-step\" or \"avoid\".",
+        },
+        {
+          points: 10,
+          passed: /\d/.test(title),
+          text: "Consider a number, for example \"5 steps…\" or \"…in 2026\".",
+        },
+        {
+          points: 15,
+          passed:
+            title.length > 0 &&
+            !(lettersOnly.length > 3 && lettersOnly === lettersOnly.toUpperCase()) &&
+            (title.match(/!/g) || []).length <= 1,
+          text: "Avoid ALL CAPITALS and repeated exclamation marks.",
+        },
+      ];
+    }
+
+    // UPDATE THE WHOLE SEO PANEL
+    function updateSeoPreview() {
+      const finalTitle = getFinalSeoTitle();
+      const finalDescription = getFinalMetaDescription();
+      const isMobile = serpBox.classList.contains("is-mobile");
+
+      // Search preview
+      serpUrl.textContent =
+        "settlebridgee.netlify.app › guide.html?slug=" + (postSlug.value || "...");
+      serpTitle.textContent = shorten(finalTitle || "Guide title", isMobile ? 70 : 60);
+      serpDescription.textContent = shorten(
+        finalDescription || "Your meta description will appear here.",
+        isMobile ? 120 : 160,
+      );
+
+      showLength(seoTitleCount, finalTitle.length, 30, 60);
+      showLength(metaDescriptionCount, finalDescription.length, 120, 160);
+
+      // SEO score
+      const seoChecks = getSeoChecks();
+      const seoScore = sumScore(seoChecks);
+      renderChecklist(seoChecklist, seoChecks);
+
+      // Headline score
+      const headlineChecks = getHeadlineChecks();
+      const headlineScore = postTitle.value.trim() ? sumScore(headlineChecks) : 0;
+      renderChecklist(headlineChecklist, headlineChecks);
+
+      const titleWords = postTitle.value.trim().split(/\s+/).filter(Boolean);
+      headlinePreview.textContent = postTitle.value.trim() || "Add a title to analyse it.";
+      headlineStats.textContent =
+        postTitle.value.trim().length + " characters · " + titleWords.length + " words";
+      headlineStart.textContent = titleWords.slice(0, 3).join(" ") || "–";
+      headlineEnd.textContent =
+        titleWords.length > 3 ? titleWords.slice(-3).join(" ") : "–";
+
+      // Score badges (in the panel and in the top bar)
+      [
+        [seoScoreBadge, seoScoreButton, seoScoreTop, seoScore],
+        [headlineScoreBadge, headlineScoreButton, headlineScoreTop, headlineScore],
+      ].forEach(function (group) {
+        const score = group[3];
+        group[0].textContent = score + "/100";
+        group[0].className = "sba-score-badge " + scoreClass(score);
+        group[1].className = "sba-score-btn " + scoreClass(score);
+        group[2].textContent = score;
+      });
+
+      // Social share preview
+      const shareImage = socialImagePath || coverImagePath;
+      if (shareImage) {
+        socialPreviewImage.src = getImageUrl(shareImage);
+        socialPreviewImage.hidden = false;
+        socialPreviewPlaceholder.hidden = true;
+      } else {
+        socialPreviewImage.removeAttribute("src");
+        socialPreviewImage.hidden = true;
+        socialPreviewPlaceholder.hidden = false;
+      }
+
+      const shareTitle = socialTitleInput.value.trim() || finalTitle;
+      const shareDescription = socialDescriptionInput.value.trim() || finalDescription;
+
+      socialPreviewTitle.textContent = shorten(shareTitle || "Guide title", 90);
+      socialPreviewDescription.textContent = shorten(shareDescription, 200);
+      socialTitleInput.placeholder = finalTitle;
+      socialDescriptionInput.placeholder = finalDescription;
+
+      showLength(socialTitleCount, shareTitle.length, 30, 60);
+      showLength(socialDescriptionCount, shareDescription.length, 60, 200);
+
+      socialRemoveButton.hidden = !socialImagePath;
+      socialUploadButton.textContent = socialImagePath
+        ? "Replace share image"
+        : "Upload share image";
+    }
+
+    function showSeoTab(tabName) {
+      document.querySelectorAll("[data-seo-tab]").forEach(function (tab) {
+        const isActive = tab.dataset.seoTab === tabName;
+        tab.classList.toggle("is-active", isActive);
+        tab.setAttribute("aria-selected", String(isActive));
+      });
+
+      byId("seoPanelGeneral").hidden = tabName !== "general";
+      byId("seoPanelHeadline").hidden = tabName !== "headline";
+      byId("seoPanelSocial").hidden = tabName !== "social";
+    }
+
+    // Insert a tag such as {title} where the cursor is
+    function insertTag(field, tag) {
+      const start = field.selectionStart ?? field.value.length;
+      const end = field.selectionEnd ?? field.value.length;
+      const before = field.value.slice(0, start);
+      const needsSpace = before.length > 0 && !/\s$/.test(before);
+      const text = (needsSpace ? " " : "") + tag + " ";
+
+      field.setRangeText(text, start, end, "end");
+      field.focus();
+      markUnsaved();
+      updateSeoPreview();
+    }
+
+    // Shared image upload (cover image and share image use the same rules)
+    async function uploadImage(file, folder) {
+      const extension = IMAGE_EXTENSIONS[file.type];
+
+      if (!extension) {
+        showEditorMessage("Please choose a JPG, PNG or WebP image.", "error");
+        return null;
+      }
+
+      if (file.size > MAX_IMAGE_BYTES) {
+        showEditorMessage("This image is larger than 2 MB. Please choose a smaller one.", "error");
+        return null;
+      }
+
+      const newPath = folder + "/" + crypto.randomUUID() + "." + extension;
+
+      const { error } = await editorSupabase.storage
+        .from(BLOG_IMAGE_BUCKET)
+        .upload(newPath, file, {
+          contentType: file.type,
+          cacheControl: "31536000",
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("Upload error:", error);
+        showEditorMessage("Could not upload this image. Please try again.", "error");
+        return null;
+      }
+
+      return newPath;
+    }
+
+    // Before replacing or removing an image: delete it now if it was never saved,
+    // or after the next save if the saved guide still uses it
+    async function releaseImage(currentPath, savedPath) {
+      if (!currentPath) return;
+
+      if (currentPath === savedPath) {
+        imagesToDelete.push(currentPath);
+      } else {
+        await deleteImages([currentPath]);
+      }
     }
 
     // UPDATE THE SCREEN
@@ -1359,14 +1780,6 @@ document.addEventListener("DOMContentLoaded", function () {
       summaryCount.classList.toggle("is-over", length > 160);
     }
 
-    function updateSeoPreview() {
-      seoUrl.textContent =
-        "settlebridgee.netlify.app › guide.html?slug=" + (postSlug.value || "...");
-      seoTitle.textContent = (postTitle.value.trim() || "Guide title") + " | SettleBridge";
-      seoSummary.textContent =
-        postSummary.value.trim() || "Your summary will appear here.";
-    }
-
     function updateCoverDisplay() {
       if (coverImagePath) {
         coverImage.src = getImageUrl(coverImagePath);
@@ -1382,6 +1795,8 @@ document.addEventListener("DOMContentLoaded", function () {
         coverRemoveButton.hidden = true;
         coverUploadButton.textContent = "Upload image";
       }
+
+      updateSeoPreview();
     }
 
     function updatePreview() {
@@ -1448,17 +1863,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Called before the current cover is replaced or removed
     async function releaseCurrentCover() {
-      if (!coverImagePath) return;
-
-      const savedPath = savedPost ? savedPost.cover_image_path : null;
-
-      if (coverImagePath === savedPath) {
-        // Still used by the saved guide: delete it only after the next save
-        imagesToDelete.push(coverImagePath);
-      } else {
-        // Uploaded but never saved: safe to delete now
-        await deleteImages([coverImagePath]);
-      }
+      await releaseImage(coverImagePath, savedPost ? savedPost.cover_image_path : null);
     }
 
     // SAVE (status is "draft" or "published")
@@ -1482,6 +1887,12 @@ document.addEventListener("DOMContentLoaded", function () {
         cover_image_path: coverImagePath,
         cover_image_alt: coverAlt.value.trim() || null,
         status: newStatus,
+        seo_title: seoTitleInput.value.trim() || null,
+        meta_description: metaDescriptionInput.value.trim() || null,
+        focus_keyphrase: focusKeyphraseInput.value.trim() || null,
+        social_title: socialTitleInput.value.trim() || null,
+        social_description: socialDescriptionInput.value.trim() || null,
+        social_image_path: socialImagePath,
       };
 
       const wasPublished = !!savedPost && savedPost.status === "published";
@@ -1582,6 +1993,12 @@ document.addEventListener("DOMContentLoaded", function () {
       postCategory.value = data.category || "Getting started";
       coverAlt.value = data.cover_image_alt || "";
       coverImagePath = data.cover_image_path || null;
+      seoTitleInput.value = data.seo_title || "";
+      metaDescriptionInput.value = data.meta_description || "";
+      focusKeyphraseInput.value = data.focus_keyphrase || "";
+      socialTitleInput.value = data.social_title || "";
+      socialDescriptionInput.value = data.social_description || "";
+      socialImagePath = data.social_image_path || null;
 
       updateEverything();
       updatePreview();
@@ -1707,12 +2124,16 @@ document.addEventListener("DOMContentLoaded", function () {
       markUnsaved();
     });
 
-    postContent.addEventListener("input", markUnsaved);
+    postContent.addEventListener("input", function () {
+      markUnsaved();
+      updateSeoPreview();
+    });
     postCategory.addEventListener("change", markUnsaved);
 
     coverAlt.addEventListener("input", function () {
       coverImage.alt = coverAlt.value.trim();
       markUnsaved();
+      updateSeoPreview();
     });
 
     // Stop the Enter key from submitting the form
@@ -1731,37 +2152,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (!file) return;
 
-      const extension = IMAGE_EXTENSIONS[file.type];
-
-      if (!extension) {
-        showEditorMessage("Please choose a JPG, PNG or WebP image.", "error");
-        return;
-      }
-
-      if (file.size > MAX_IMAGE_BYTES) {
-        showEditorMessage("This image is larger than 2 MB. Please choose a smaller one.", "error");
-        return;
-      }
-
       setBusy(true);
       coverUploadButton.textContent = "Uploading...";
 
       try {
-        const newPath = "covers/" + crypto.randomUUID() + "." + extension;
-
-        const { error } = await editorSupabase.storage
-          .from(BLOG_IMAGE_BUCKET)
-          .upload(newPath, file, {
-            contentType: file.type,
-            cacheControl: "31536000",
-            upsert: false,
-          });
-
-        if (error) {
-          console.error("Upload error:", error);
-          showEditorMessage("Could not upload this image. Please try again.", "error");
-          return;
-        }
+        const newPath = await uploadImage(file, "covers");
+        if (!newPath) return;
 
         await releaseCurrentCover();
         coverImagePath = newPath;
@@ -1783,6 +2179,100 @@ document.addEventListener("DOMContentLoaded", function () {
       } finally {
         setBusy(false);
         updateCoverDisplay();
+      }
+    });
+
+    // SEO PANEL: TABS, PREVIEW SIZE, TAGS AND FIELDS
+    document.querySelectorAll("[data-seo-tab]").forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        showSeoTab(tab.dataset.seoTab);
+      });
+    });
+
+    seoScoreButton.addEventListener("click", function () {
+      showSeoTab("general");
+      byId("seoPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    headlineScoreButton.addEventListener("click", function () {
+      showSeoTab("headline");
+      byId("seoPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    function setSerpDevice(mobile) {
+      serpBox.classList.toggle("is-mobile", mobile);
+      serpDesktop.classList.toggle("is-active", !mobile);
+      serpMobile.classList.toggle("is-active", mobile);
+      serpDesktop.setAttribute("aria-pressed", String(!mobile));
+      serpMobile.setAttribute("aria-pressed", String(mobile));
+      updateSeoPreview();
+    }
+
+    serpDesktop.addEventListener("click", function () {
+      setSerpDevice(false);
+    });
+
+    serpMobile.addEventListener("click", function () {
+      setSerpDevice(true);
+    });
+
+    document.querySelectorAll("[data-insert-into]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        insertTag(byId(button.dataset.insertInto), button.dataset.tag);
+      });
+    });
+
+    [
+      seoTitleInput,
+      metaDescriptionInput,
+      focusKeyphraseInput,
+      socialTitleInput,
+      socialDescriptionInput,
+    ].forEach(function (field) {
+      field.addEventListener("input", function () {
+        markUnsaved();
+        updateSeoPreview();
+      });
+    });
+
+    // SHARE IMAGE
+    socialUploadButton.addEventListener("click", function () {
+      socialInput.click();
+    });
+
+    socialInput.addEventListener("change", async function () {
+      const file = socialInput.files[0];
+      socialInput.value = "";
+
+      if (!file) return;
+
+      setBusy(true);
+      socialUploadButton.textContent = "Uploading...";
+
+      try {
+        const newPath = await uploadImage(file, "social");
+        if (!newPath) return;
+
+        await releaseImage(socialImagePath, savedPost ? savedPost.social_image_path : null);
+        socialImagePath = newPath;
+        markUnsaved();
+        showEditorMessage("Share image uploaded. Save the guide to keep it.", "success");
+      } finally {
+        setBusy(false);
+        updateSeoPreview();
+      }
+    });
+
+    socialRemoveButton.addEventListener("click", async function () {
+      setBusy(true);
+
+      try {
+        await releaseImage(socialImagePath, savedPost ? savedPost.social_image_path : null);
+        socialImagePath = null;
+        markUnsaved();
+      } finally {
+        setBusy(false);
+        updateSeoPreview();
       }
     });
 
@@ -1830,7 +2320,12 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         await deleteImages(
-          [savedPost && savedPost.cover_image_path, coverImagePath].concat(imagesToDelete),
+          [
+            savedPost && savedPost.cover_image_path,
+            savedPost && savedPost.social_image_path,
+            coverImagePath,
+            socialImagePath,
+          ].concat(imagesToDelete),
         );
 
         hasUnsavedChanges = false;

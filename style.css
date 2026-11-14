@@ -3841,3 +3841,394 @@ textarea.sba-input {
         padding: 28px 22px;
     }
 }
+
+
+/* =====================================
+   ADMIN GUIDE EDITOR: SEO PANEL
+===================================== */
+
+.sba-score-btn {
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid #CBD5E1;
+    background: #FFFFFF;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.sba-score-btn.is-good {
+    border-color: #86EFAC;
+    background: #F0FDF4;
+    color: #166534;
+}
+
+.sba-score-btn.is-ok {
+    border-color: #FCD34D;
+    background: #FFFBEB;
+    color: #92400E;
+}
+
+.sba-score-btn.is-poor {
+    border-color: #FCA5A5;
+    background: #FEF2F2;
+    color: #991B1B;
+}
+
+.sba-seo-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px 20px;
+    padding: 16px 20px 0;
+    border-bottom: 1px solid #E2E8F0;
+    background: #F8FAFC;
+}
+
+.sba-seo-heading {
+    padding-bottom: 14px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #0A3D62;
+}
+
+.sba-seo-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.sba-seo-tabs button {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.sba-seo-tabs button.is-active {
+    border-bottom-color: #0A3D62;
+    color: #0A3D62;
+}
+
+.sba-seo-body {
+    padding: 4px 20px 20px;
+}
+
+.sba-seo-row {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 12px 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid #EEF2F6;
+}
+
+.sba-seo-row:last-child {
+    border-bottom: 0;
+}
+
+.sba-seo-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.sba-device-toggle {
+    display: flex;
+    gap: 6px;
+}
+
+.sba-device-toggle button {
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sba-device-toggle button.is-active {
+    background: #E6EEF5;
+    color: #0A3D62;
+}
+
+/* Google-style search preview */
+
+.sba-serp {
+    max-width: 640px;
+    padding: 16px 18px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    background: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.sba-serp.is-mobile {
+    max-width: 380px;
+}
+
+.sba-serp-site {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.sba-serp-site img {
+    border-radius: 50%;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+}
+
+.sba-serp-site div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.sba-serp-name {
+    font-size: 14px;
+    color: #202124;
+}
+
+.sba-serp-url {
+    font-size: 12px;
+    color: #4D5156;
+    overflow-wrap: anywhere;
+}
+
+.sba-serp-title {
+    font-size: 20px;
+    line-height: 1.3;
+    color: #1A0DAB;
+}
+
+.sba-serp-description {
+    font-size: 14px;
+    line-height: 1.55;
+    color: #4D5156;
+}
+
+/* Tag buttons and length notes */
+
+.sba-tag-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sba-tag-buttons button {
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    background: #FFFFFF;
+    color: #0A3D62;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.sba-tag-buttons button:hover {
+    background: #F1F5F9;
+}
+
+.sba-length-note {
+    align-self: flex-end;
+    font-size: 13px;
+    color: #475569;
+}
+
+.sba-length-note.is-good {
+    color: #166534;
+}
+
+.sba-length-note.is-warning {
+    color: #B45309;
+    font-weight: 600;
+}
+
+/* Checklists and scores */
+
+.sba-score-badge {
+    display: inline-flex;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+    background: #EEF2F6;
+    color: #334155;
+}
+
+.sba-score-badge.is-good {
+    background: #DCFCE7;
+    color: #166534;
+}
+
+.sba-score-badge.is-ok {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.sba-score-badge.is-poor {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.sba-checklist {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14px;
+    color: #334155;
+}
+
+.sba-checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.sba-check-icon {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.sba-checklist li.is-passed .sba-check-icon {
+    background: #DCFCE7;
+    color: #166534;
+}
+
+.sba-checklist li.is-failed .sba-check-icon {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+/* Headline tab */
+
+.sba-headline-preview {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: #0A3D62;
+}
+
+.sba-word-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 32px;
+}
+
+.sba-word-groups > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sba-word-chip {
+    align-self: flex-start;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: #EEF2F6;
+    font-size: 14px;
+    font-weight: 600;
+    color: #172B3A;
+}
+
+/* Social tab */
+
+.sba-social-card {
+    max-width: 520px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #FFFFFF;
+}
+
+.sba-social-image {
+    aspect-ratio: 1200 / 630;
+    background: #E6EEF5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0A3D62;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sba-social-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sba-social-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background: #F8FAFC;
+    border-top: 1px solid #E2E8F0;
+}
+
+.sba-social-domain {
+    font-size: 12px;
+    color: #475569;
+    text-transform: uppercase;
+}
+
+.sba-social-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #172B3A;
+}
+
+.sba-social-description {
+    font-size: 14px;
+    color: #475569;
+}
+
+.sba-btn-row-start .sba-btn {
+    flex: 0 0 auto;
+}
+
+.sba-info-note {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #E6EEF5;
+    color: #0A3D62;
+    font-size: 14px;
+}
+
+@media (max-width: 700px) {
+    .sba-seo-row {
+        grid-template-columns: 1fr;
+    }
+
+    .sba-seo-label {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+}

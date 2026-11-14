@@ -49,6 +49,8 @@
         </div>
 
         <div class="sba-editor-actions">
+            <button type="button" id="seoScoreButton" class="sba-score-btn">SEO <span id="seoScoreTop">0</span>/100</button>
+            <button type="button" id="headlineScoreButton" class="sba-score-btn">Headline <span id="headlineScoreTop">0</span>/100</button>
             <span id="saveStatus" class="sba-muted">Not saved yet</span>
             <a id="viewLiveLink" href="#" class="sba-text-link" target="_blank" rel="noopener" hidden>View on website</a>
             <button type="button" id="unpublishButton" class="sba-btn sba-btn-outline" hidden>Unpublish</button>
@@ -110,6 +112,179 @@
 
                 <div id="previewPanel" class="sba-article-body sba-preview-panel" hidden></div>
             </div>
+
+            <!-- SEO PANEL -->
+            <div id="seoPanel" class="sba-card sba-card-flush">
+
+                <div class="sba-seo-head">
+                    <h2 class="sba-seo-heading">SEO settings</h2>
+                    <div class="sba-seo-tabs" role="tablist" aria-label="SEO sections">
+                        <button type="button" role="tab" id="seoTabGeneral" data-seo-tab="general" aria-selected="true" aria-controls="seoPanelGeneral" class="is-active">General</button>
+                        <button type="button" role="tab" id="seoTabHeadline" data-seo-tab="headline" aria-selected="false" aria-controls="seoPanelHeadline">Headline</button>
+                        <button type="button" role="tab" id="seoTabSocial" data-seo-tab="social" aria-selected="false" aria-controls="seoPanelSocial">Social</button>
+                    </div>
+                </div>
+
+                <!-- GENERAL TAB -->
+                <div id="seoPanelGeneral" class="sba-seo-body" role="tabpanel" aria-labelledby="seoTabGeneral">
+
+                    <div class="sba-seo-row">
+                        <div class="sba-seo-label">
+                            <span class="sba-field-label">Search preview</span>
+                            <div class="sba-device-toggle" role="group" aria-label="Preview size">
+                                <button type="button" id="serpDesktop" class="is-active" aria-pressed="true" aria-label="Desktop preview">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg>
+                                </button>
+                                <button type="button" id="serpMobile" aria-pressed="false" aria-label="Mobile preview">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="serpBox" class="sba-serp">
+                            <div class="sba-serp-site">
+                                <img src="favicon.png" alt="" width="28" height="28">
+                                <div>
+                                    <span class="sba-serp-name">SettleBridge</span>
+                                    <span id="serpUrl" class="sba-serp-url"></span>
+                                </div>
+                            </div>
+                            <span id="serpTitle" class="sba-serp-title"></span>
+                            <span id="serpDescription" class="sba-serp-description"></span>
+                        </div>
+                    </div>
+
+                    <div class="sba-seo-row">
+                        <label for="seoTitle" class="sba-seo-label sba-field-label">SEO title</label>
+                        <div class="sba-field">
+                            <span class="sba-hint">Click a tag to insert it. Tags are replaced automatically, so the SEO title stays up to date if you change the guide.</span>
+                            <div class="sba-tag-buttons">
+                                <button type="button" data-insert-into="seoTitle" data-tag="{title}">+ Guide title</button>
+                                <button type="button" data-insert-into="seoTitle" data-tag="{sep}">+ Separator</button>
+                                <button type="button" data-insert-into="seoTitle" data-tag="{site}">+ Site name</button>
+                            </div>
+                            <input type="text" id="seoTitle" class="sba-input" maxlength="120" placeholder="{title} {sep} {site}" autocomplete="off">
+                            <span id="seoTitleCount" class="sba-length-note"></span>
+                        </div>
+                    </div>
+
+                    <div class="sba-seo-row">
+                        <label for="metaDescription" class="sba-seo-label sba-field-label">Meta description</label>
+                        <div class="sba-field">
+                            <span class="sba-hint">The short text under the title on Google. Leave empty to use the summary.</span>
+                            <div class="sba-tag-buttons">
+                                <button type="button" data-insert-into="metaDescription" data-tag="{summary}">+ Summary</button>
+                                <button type="button" data-insert-into="metaDescription" data-tag="{title}">+ Guide title</button>
+                                <button type="button" data-insert-into="metaDescription" data-tag="{sep}">+ Separator</button>
+                            </div>
+                            <textarea id="metaDescription" class="sba-input" rows="3" maxlength="320" placeholder="{summary}"></textarea>
+                            <span id="metaDescriptionCount" class="sba-length-note"></span>
+                        </div>
+                    </div>
+
+                    <div class="sba-seo-row">
+                        <label for="focusKeyphrase" class="sba-seo-label sba-field-label">Focus keyphrase</label>
+                        <div class="sba-field">
+                            <input type="text" id="focusKeyphrase" class="sba-input" maxlength="100" placeholder="For example: NIF in Portugal" autocomplete="off">
+                            <span class="sba-hint">The main search phrase you want this guide to be found for.</span>
+                        </div>
+                    </div>
+
+                    <div class="sba-seo-row">
+                        <div class="sba-seo-label">
+                            <span class="sba-field-label">SEO checklist</span>
+                            <span class="sba-score-badge" id="seoScoreBadge">0/100</span>
+                        </div>
+                        <ul id="seoChecklist" class="sba-checklist"></ul>
+                    </div>
+                </div>
+
+                <!-- HEADLINE TAB -->
+                <div id="seoPanelHeadline" class="sba-seo-body" role="tabpanel" aria-labelledby="seoTabHeadline" hidden>
+
+                    <div class="sba-seo-row">
+                        <div class="sba-seo-label">
+                            <span class="sba-field-label">Headline score</span>
+                            <span class="sba-score-badge" id="headlineScoreBadge">0/100</span>
+                        </div>
+                        <div class="sba-field">
+                            <p id="headlinePreview" class="sba-headline-preview"></p>
+                            <span id="headlineStats" class="sba-hint"></span>
+                        </div>
+                    </div>
+
+                    <div class="sba-seo-row">
+                        <span class="sba-seo-label sba-field-label">First and last words</span>
+                        <div class="sba-field">
+                            <div class="sba-word-groups">
+                                <div>
+                                    <span class="sba-hint">Beginning words</span>
+                                    <span id="headlineStart" class="sba-word-chip"></span>
+                                </div>
+                                <div>
+                                    <span class="sba-hint">Ending words</span>
+                                    <span id="headlineEnd" class="sba-word-chip"></span>
+                                </div>
+                            </div>
+                            <span class="sba-hint">Most readers only look at the first and last 3 words of a headline before deciding whether to click.</span>
+                        </div>
+                    </div>
+
+                    <div class="sba-seo-row">
+                        <span class="sba-seo-label sba-field-label">Headline checklist</span>
+                        <ul id="headlineChecklist" class="sba-checklist"></ul>
+                    </div>
+                </div>
+
+                <!-- SOCIAL TAB -->
+                <div id="seoPanelSocial" class="sba-seo-body" role="tabpanel" aria-labelledby="seoTabSocial" hidden>
+
+                    <div class="sba-seo-row">
+                        <span class="sba-seo-label sba-field-label">Share preview</span>
+                        <div class="sba-social-card">
+                            <div class="sba-social-image">
+                                <img id="socialPreviewImage" alt="" hidden>
+                                <span id="socialPreviewPlaceholder">No image</span>
+                            </div>
+                            <div class="sba-social-text">
+                                <span class="sba-social-domain">settlebridgee.netlify.app</span>
+                                <span id="socialPreviewTitle" class="sba-social-title"></span>
+                                <span id="socialPreviewDescription" class="sba-social-description"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sba-seo-row">
+                        <span class="sba-seo-label sba-field-label">Share image</span>
+                        <div class="sba-field">
+                            <input type="file" id="socialInput" class="sba-visually-hidden" accept="image/jpeg,image/png,image/webp" tabindex="-1">
+                            <div class="sba-btn-row sba-btn-row-start">
+                                <button type="button" id="socialUploadButton" class="sba-btn sba-btn-cancel">Upload share image</button>
+                                <button type="button" id="socialRemoveButton" class="sba-btn sba-btn-text-danger" hidden>Remove</button>
+                            </div>
+                            <span class="sba-hint">Leave empty to use the cover image. Best size: 1200 × 630 pixels. JPG, PNG or WebP, up to 2 MB.</span>
+                        </div>
+                    </div>
+
+                    <div class="sba-seo-row">
+                        <label for="socialTitle" class="sba-seo-label sba-field-label">Share title</label>
+                        <div class="sba-field">
+                            <input type="text" id="socialTitle" class="sba-input" maxlength="120" autocomplete="off">
+                            <span id="socialTitleCount" class="sba-length-note"></span>
+                        </div>
+                    </div>
+
+                    <div class="sba-seo-row">
+                        <label for="socialDescription" class="sba-seo-label sba-field-label">Share description</label>
+                        <div class="sba-field">
+                            <textarea id="socialDescription" class="sba-input" rows="2" maxlength="320"></textarea>
+                            <span id="socialDescriptionCount" class="sba-length-note"></span>
+                        </div>
+                    </div>
+
+                    <p class="sba-info-note">WhatsApp, Facebook and LinkedIn will start using these once we add the sharing helper, which is a later step. Until then, they are saved but not yet shown by those apps.</p>
+                </div>
+            </div>
         </div>
 
         <!-- SIDEBAR -->
@@ -166,15 +341,6 @@
                         <option>City guides</option>
                     </select>
                 </label>
-            </div>
-
-            <div class="sba-card sba-field-stack">
-                <h2 class="sba-card-heading">Google preview</h2>
-                <div class="sba-seo">
-                    <span id="seoUrl" class="sba-seo-url"></span>
-                    <span id="seoTitle" class="sba-seo-title"></span>
-                    <span id="seoSummary" class="sba-seo-summary"></span>
-                </div>
             </div>
 
             <div id="deleteCard" class="sba-card sba-danger-card" hidden>
