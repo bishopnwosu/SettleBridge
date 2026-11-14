@@ -4232,3 +4232,40 @@ textarea.sba-input {
         width: 100%;
     }
 }
+
+
+/* =====================================
+   MENU ON MEDIUM-WIDTH SCREENS (LAPTOPS AND TABLETS)
+   Keeps each menu item on one line now that "Guides" is in the menu.
+===================================== */
+
+.nav-links a {
+    white-space: nowrap;
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+    .navbar {
+        gap: 12px;
+    }
+
+    .nav-links {
+        gap: 14px;
+    }
+
+    .nav-links a {
+        font-size: 13px;
+    }
+
+    .navbar .nav-buttons {
+        gap: 8px;
+    }
+
+    .navbar .nav-buttons .btn {
+        padding: 10px 14px;
+        white-space: nowrap;
+    }
+
+    .logo {
+        font-size: 22px;
+    }
+}
