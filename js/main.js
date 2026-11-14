@@ -368,8 +368,121 @@ document.addEventListener("DOMContentLoaded", function () {
       "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
     );
 
+    // The Edge Function that approves/rejects and emails the provider
+    const REVIEW_FUNCTION_NAME = "swift-api";
+
+    const STATUS_LABELS = {
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Rejected",
+    };
+
+    // PAGE ELEMENTS
     const adminMessage = document.querySelector("#adminMessage");
     const logoutButton = document.querySelector("#adminLogout");
+    const searchInput = document.querySelector("#adminSearch");
+    const citySelect = document.querySelector("#adminCity");
+    const emptyList = document.querySelector("#emptyList");
+    const statusTabs = document.querySelectorAll(".sba-tab");
+
+    const adminToast = document.querySelector("#adminToast");
+    const adminToastText = document.querySelector("#adminToastText");
+    const adminToastClose = document.querySelector("#adminToastClose");
+
+    const detailEmpty = document.querySelector("#detailEmpty");
+    const detailPanel = document.querySelector("#detailPanel");
+    const detailActions = document.querySelector("#detailActions");
+    const detailConfirm = document.querySelector("#detailConfirm");
+    const detailDecided = document.querySelector("#detailDecided");
+
+    const approveButton = document.querySelector("#approveButton");
+    const rejectButton = document.querySelector("#rejectButton");
+    const cancelConfirmButton = document.querySelector("#cancelConfirmButton");
+    const doConfirmButton = document.querySelector("#doConfirmButton");
+
+    // DASHBOARD STATE
+    let allApplications = [];
+    let categoryNames = {};
+    let currentTab = "pending";
+    let selectedId = null;
+    let pendingDecision = null; // "approve" or "reject" while confirming
+    let isSubmitting = false;
+
+    // SMALL HELPERS
+    // textContent is used everywhere so provider-typed text can never run as code.
+    function showValue(selector, value) {
+      const element = document.querySelector(selector);
+      if (!element) return;
+
+      const isEmpty =
+        value === null || value === undefined || String(value).trim() === "";
+
+      element.textContent = isEmpty ? "Not provided" : String(value);
+    }
+
+    function formatDate(value) {
+      if (!value) return "Not provided";
+
+      return new Date(value).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+
+    // "none" (still pending), "sent", "failed" or "unknown" (reviewed before emails existed)
+    function getEmailState(application) {
+      if (application.status === "pending") return "none";
+      if (application.decision_email_sent_at) return "sent";
+      if (application.decision_email_error) return "failed";
+      return "unknown";
+    }
+
+    function getCategoryName(application) {
+      return categoryNames[application.category_id] || "Not provided";
+    }
+
+    function getPricingText(application) {
+      const parts = [];
+
+      if (application.pricing_type) parts.push(application.pricing_type);
+
+      if (application.base_price !== null && application.base_price !== undefined) {
+        parts.push("from €" + Number(application.base_price).toLocaleString("en-GB"));
+      }
+
+      return parts.join(", ");
+    }
+
+    function createStatusBadge(status) {
+      const badge = document.createElement("span");
+      const known = Object.prototype.hasOwnProperty.call(STATUS_LABELS, status);
+
+      badge.className = "sba-badge" + (known ? " sba-badge-" + status : "");
+      badge.textContent = known ? STATUS_LABELS[status] : status || "Unknown";
+
+      return badge;
+    }
+
+    function showMessage(text) {
+      adminMessage.textContent = text;
+      adminMessage.hidden = false;
+    }
+
+    function hideMessage() {
+      adminMessage.hidden = true;
+      adminMessage.textContent = "";
+    }
+
+    function showToast(text, kind) {
+      adminToastText.textContent = text;
+      adminToast.className = "sba-toast sba-toast-" + kind;
+      adminToast.hidden = false;
+    }
+
+    function hideToast() {
+      adminToast.hidden = true;
+    }
 
     // CHECK ADMIN LOGIN AND PERMISSIONS
     async function checkAdminAccess() {
@@ -395,155 +508,342 @@ document.addEventListener("DOMContentLoaded", function () {
       return true;
     }
 
-    // DISPLAY PROVIDER APPLICATIONS
-    async function loadApplications() {
-      applicationsTable.innerHTML = `
-        <tr>
-          <td colspan="6" style="padding:20px; text-align:center;">
-            Loading applications...
-          </td>
-        </tr>
-      `;
+    // LOAD SERVICE CATEGORY NAMES (for the Service column)
+    async function loadCategories() {
+      const { data, error } = await adminSupabase
+        .from("service_categories")
+        .select("*");
 
-      const { data: applications, error } = await adminSupabase
+      if (error) {
+        console.error("Categories error:", error);
+        return;
+      }
+
+      categoryNames = {};
+
+      (data || []).forEach(function (category) {
+        categoryNames[category.id] =
+          category.name || category.title || category.slug || "Not provided";
+      });
+    }
+
+    // LOAD PROVIDER APPLICATIONS
+    async function loadApplications() {
+      const { data, error } = await adminSupabase
         .from("provider_applications")
         .select(
-          "id, business_name, contact_name, email, phone, city, status, created_at",
+          "id, business_name, contact_name, email, phone, whatsapp, business_type, country, city, website, category_id, pricing_type, base_price, languages, service_area, service_description, registration_number, document_type, status, created_at, reviewed_at, decision_email_sent_at, decision_email_error",
         )
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Applications error:", error);
-        adminMessage.textContent =
-          "Unable to load applications. Please try again.";
+        showMessage("Unable to load applications. Please refresh the page.");
         applicationsTable.replaceChildren();
         return;
       }
 
-      // =====================================
-      // UPDATE ADMIN SUMMARY CARDS
-      // =====================================
+      allApplications = data || [];
 
-      document.querySelector("#totalApplications").textContent =
-        applications.length;
+      hideMessage();
+      updateSummary();
+      updateCityOptions();
+      renderTable();
+      renderDetail();
+    }
 
-      document.querySelector("#pendingApplications").textContent =
-        applications.filter((app) => app.status === "pending").length;
+    // UPDATE SUMMARY CARDS AND TAB COUNTS
+    function updateSummary() {
+      function countStatus(status) {
+        return allApplications.filter(function (app) {
+          return app.status === status;
+        }).length;
+      }
 
-      document.querySelector("#approvedApplications").textContent =
-        applications.filter((app) => app.status === "approved").length;
+      const counts = {
+        all: allApplications.length,
+        pending: countStatus("pending"),
+        approved: countStatus("approved"),
+        rejected: countStatus("rejected"),
+      };
 
-      document.querySelector("#rejectedApplications").textContent =
-        applications.filter((app) => app.status === "rejected").length;
+      const emailFailedCount = allApplications.filter(function (app) {
+        return getEmailState(app) === "failed";
+      }).length;
+
+      const oldestPending = allApplications
+        .filter(function (app) {
+          return app.status === "pending";
+        })
+        .sort(function (a, b) {
+          return new Date(a.created_at) - new Date(b.created_at);
+        })[0];
+
+      document.querySelector("#totalApplications").textContent = counts.all;
+      document.querySelector("#pendingApplications").textContent = counts.pending;
+      document.querySelector("#approvedApplications").textContent = counts.approved;
+      document.querySelector("#rejectedApplications").textContent = counts.rejected;
+      document.querySelector("#emailFailedApplications").textContent = emailFailedCount;
+      document.querySelector("#oldestPending").textContent = oldestPending
+        ? formatDate(oldestPending.created_at)
+        : "none";
+
+      document.querySelectorAll("[data-count]").forEach(function (element) {
+        element.textContent = counts[element.dataset.count];
+      });
+    }
+
+    // FILL THE CITY DROPDOWN FROM THE APPLICATIONS
+    function updateCityOptions() {
+      const previousCity = citySelect.value;
+
+      const cities = [];
+      allApplications.forEach(function (app) {
+        if (app.city && cities.indexOf(app.city) === -1) cities.push(app.city);
+      });
+      cities.sort();
+
+      citySelect.replaceChildren();
+
+      const allOption = document.createElement("option");
+      allOption.value = "all";
+      allOption.textContent = "All cities";
+      citySelect.appendChild(allOption);
+
+      cities.forEach(function (city) {
+        const option = document.createElement("option");
+        option.value = city;
+        option.textContent = city;
+        citySelect.appendChild(option);
+      });
+
+      citySelect.value = cities.indexOf(previousCity) !== -1 ? previousCity : "all";
+    }
+
+    // APPLY STATUS TAB, CITY AND SEARCH
+    function getFilteredApplications() {
+      const search = searchInput.value.trim().toLowerCase();
+      const city = citySelect.value;
+
+      return allApplications
+        .filter(function (app) {
+          if (currentTab !== "all" && app.status !== currentTab) return false;
+          if (city !== "all" && app.city !== city) return false;
+
+          if (search) {
+            const text = [app.business_name, app.contact_name, app.email]
+              .join(" ")
+              .toLowerCase();
+            if (text.indexOf(search) === -1) return false;
+          }
+
+          return true;
+        })
+        .sort(function (a, b) {
+          // Pending: oldest first, so nobody waits too long. Others: newest first.
+          const difference = new Date(a.created_at) - new Date(b.created_at);
+          return currentTab === "pending" ? difference : -difference;
+        });
+    }
+
+    // DISPLAY THE TABLE
+    function renderTable() {
+      const applications = getFilteredApplications();
 
       applicationsTable.replaceChildren();
+      emptyList.hidden = applications.length > 0;
 
-      if (!applications || applications.length === 0) {
+      applications.forEach(function (app) {
         const row = document.createElement("tr");
-        const cell = document.createElement("td");
+        row.className = "sba-row" + (app.id === selectedId ? " is-selected" : "");
+        row.addEventListener("click", function () {
+          selectApplication(app.id);
+        });
 
-        cell.colSpan = 6;
-        cell.textContent = "No provider applications found.";
-        cell.style.padding = "20px";
-        cell.style.textAlign = "center";
+        // Business and contact
+        const businessCell = document.createElement("td");
+        const openButton = document.createElement("button");
+        openButton.type = "button";
+        openButton.className = "sba-link";
+        openButton.textContent = app.business_name || "Unnamed business";
 
-        row.appendChild(cell);
+        const contactLine = document.createElement("div");
+        contactLine.className = "sba-sub";
+        contactLine.textContent = app.contact_name || "";
+
+        businessCell.appendChild(openButton);
+        businessCell.appendChild(contactLine);
+
+        // Service, city and date
+        const serviceCell = document.createElement("td");
+        serviceCell.textContent = getCategoryName(app);
+
+        const cityCell = document.createElement("td");
+        cityCell.textContent = app.city || "Not provided";
+
+        const dateCell = document.createElement("td");
+        dateCell.className = "sba-nowrap";
+        dateCell.textContent = formatDate(app.created_at);
+
+        // Status
+        const statusCell = document.createElement("td");
+        statusCell.appendChild(createStatusBadge(app.status));
+
+        if (getEmailState(app) === "failed") {
+          const warning = document.createElement("div");
+          warning.className = "sba-email-failed";
+          warning.textContent = "Email not sent";
+          statusCell.appendChild(warning);
+        }
+
+        row.appendChild(businessCell);
+        row.appendChild(serviceCell);
+        row.appendChild(cityCell);
+        row.appendChild(dateCell);
+        row.appendChild(statusCell);
+
         applicationsTable.appendChild(row);
+      });
+    }
+
+    // SELECT AN APPLICATION
+    function selectApplication(applicationId) {
+      selectedId = applicationId;
+      pendingDecision = null;
+      hideToast();
+
+      renderTable();
+      renderDetail();
+
+      // On phones the details panel is below the table, so scroll to it
+      if (window.innerWidth < 900) {
+        detailPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    // DISPLAY THE DETAILS PANEL
+    function renderDetail() {
+      const app = allApplications.find(function (item) {
+        return item.id === selectedId;
+      });
+
+      if (!app) {
+        detailEmpty.hidden = false;
+        detailPanel.hidden = true;
         return;
       }
 
-      applications.forEach(function (application) {
-        const row = document.createElement("tr");
+      detailEmpty.hidden = true;
+      detailPanel.hidden = false;
 
-        const values = [
-          application.business_name,
-          application.contact_name + " (" + application.email + ")",
-          application.city,
-          application.status,
-          new Date(application.created_at).toLocaleDateString(),
-        ];
+      // Header
+      const statusBadge = document.querySelector("#detailStatus");
+      const newBadge = createStatusBadge(app.status);
+      statusBadge.className = newBadge.className;
+      statusBadge.textContent = newBadge.textContent;
 
-        values.forEach(function (value, index) {
-          const cell = document.createElement("td");
+      document.querySelector("#detailDate").textContent =
+        "Submitted " + formatDate(app.created_at);
+      showValue("#detailBusiness", app.business_name);
 
-          cell.style.padding = "14px";
-          cell.style.borderTop = "1px solid #E5E7EB";
+      const place = [app.city, app.country].filter(Boolean).join(", ");
+      showValue("#detailMeta", [getCategoryName(app), place].filter(Boolean).join(" · "));
 
-          // Style the application status
-          if (index === 3) {
-            const statusBadge = document.createElement("span");
-            const status = String(value || "Not provided").toLowerCase();
+      // Contact
+      showValue("#detailContact", app.contact_name);
+      showValue("#detailEmail", app.email);
+      showValue("#detailPhone", app.phone);
+      showValue("#detailWhatsapp", app.whatsapp);
 
-            statusBadge.className = "status-badge status-" + status;
-            statusBadge.textContent = value || "Not provided";
+      // Business (website shown as plain text on purpose: never a clickable link)
+      showValue("#detailBusinessType", app.business_type);
+      showValue("#detailWebsite", app.website);
+      showValue("#detailRegNumber", app.registration_number);
+      showValue("#detailDocument", app.document_type);
 
-            cell.appendChild(statusBadge);
-          } else {
-            cell.textContent = value || "Not provided";
-          }
+      // Services
+      showValue("#detailPricing", getPricingText(app));
+      showValue("#detailLanguages", app.languages);
+      showValue("#detailArea", app.service_area);
+      showValue("#detailDescription", app.service_description);
 
-          row.appendChild(cell);
-        });
+      // Actions
+      const isPending = app.status === "pending";
 
-        const actionCell = document.createElement("td");
-        actionCell.style.padding = "14px";
-        actionCell.style.borderTop = "1px solid #E5E7EB";
+      detailActions.hidden = !isPending || pendingDecision !== null;
+      detailConfirm.hidden = !isPending || pendingDecision === null;
+      detailDecided.hidden = isPending;
 
-        if (application.status === "pending") {
-          const approveButton = document.createElement("button");
-          approveButton.textContent = "Approve";
-          approveButton.type = "button";
-          approveButton.style.marginRight = "6px";
+      if (isPending && pendingDecision !== null) {
+        const approving = pendingDecision === "approve";
 
-          const rejectButton = document.createElement("button");
-          rejectButton.textContent = "Reject";
-          rejectButton.type = "button";
+        document.querySelector("#confirmTitle").textContent =
+          (approving ? "Approve " : "Reject ") +
+          (app.business_name || "this application") +
+          "?";
 
-          approveButton.addEventListener("click", function () {
-            updateApplication(application.id, "approved");
-          });
+        document.querySelector("#confirmText").textContent =
+          "We will email " +
+          (app.contact_name || "the provider") +
+          " at " +
+          (app.email || "their email address") +
+          ". You can't undo this.";
 
-          rejectButton.addEventListener("click", function () {
-            updateApplication(application.id, "rejected");
-          });
+        doConfirmButton.className =
+          "sba-btn " + (approving ? "sba-btn-approve" : "sba-btn-reject-solid");
+        doConfirmButton.textContent = isSubmitting
+          ? "Sending..."
+          : approving
+            ? "Yes, approve"
+            : "Yes, reject";
+        doConfirmButton.disabled = isSubmitting;
+        cancelConfirmButton.disabled = isSubmitting;
+      }
 
-          actionCell.appendChild(approveButton);
-          actionCell.appendChild(rejectButton);
-        } else {
-          actionCell.textContent = "Reviewed";
+      if (!isPending) {
+        const decidedText = document.querySelector("#decidedText");
+        const label = document.createElement("strong");
+        label.textContent = STATUS_LABELS[app.status] || app.status;
+
+        decidedText.replaceChildren(
+          label,
+          document.createTextNode(" on " + formatDate(app.reviewed_at) + "."),
+        );
+
+        const emailState = getEmailState(app);
+
+        document.querySelector("#emailOk").hidden = emailState !== "sent";
+        document.querySelector("#emailFailed").hidden = emailState !== "failed";
+        document.querySelector("#emailUnknown").hidden = emailState !== "unknown";
+
+        if (emailState === "failed") {
+          document.querySelector("#emailFailedText").textContent =
+            "Please contact " +
+            (app.contact_name || "the provider") +
+            " directly at " +
+            (app.email || "their email address") +
+            ".";
         }
-
-        row.appendChild(actionCell);
-        applicationsTable.appendChild(row);
-      });
-
-      adminMessage.textContent =
-        applications.length + " provider application(s) found.";
+      }
     }
 
-    // APPROVE OR REJECT APPLICATION
-    // Sends the decision to the secure "review-application" Edge Function.
+    // SEND THE DECISION TO THE SECURE EDGE FUNCTION
     // The server checks you are an admin, updates the status and emails the provider.
-    async function updateApplication(applicationId, newStatus) {
-      const decision = newStatus === "approved" ? "approve" : "reject";
+    async function submitDecision() {
+      if (isSubmitting || pendingDecision === null || selectedId === null) return;
 
-      const confirmed = confirm(
-        "Are you sure you want to " +
-          decision +
-          " this application? The provider will be emailed.",
-      );
-
-      if (!confirmed) return;
-
-      // Prevent double-clicks while we wait for the server
-      applicationsTable.querySelectorAll("button").forEach(function (button) {
-        button.disabled = true;
+      const decision = pendingDecision;
+      const app = allApplications.find(function (item) {
+        return item.id === selectedId;
       });
+
+      isSubmitting = true;
+      renderDetail();
 
       try {
         const { data, error } = await adminSupabase.functions.invoke(
-          "swift-api",
-          { body: { applicationId: applicationId, decision: decision } },
+          REVIEW_FUNCTION_NAME,
+          { body: { applicationId: selectedId, decision: decision } },
         );
 
         if (error) {
@@ -560,15 +860,59 @@ document.addEventListener("DOMContentLoaded", function () {
           }
 
           console.error("Review error:", error);
-          alert(message);
+          showToast(message, "error");
           return;
         }
 
-        alert(data.message);
+        const businessName = app && app.business_name ? app.business_name + ": " : "";
+        showToast(businessName + data.message, data.emailSent ? "success" : "warning");
       } finally {
-        loadApplications();
+        isSubmitting = false;
+        pendingDecision = null;
+        await loadApplications();
       }
     }
+
+    // BUTTONS AND FILTERS
+    approveButton.addEventListener("click", function () {
+      pendingDecision = "approve";
+      hideToast();
+      renderDetail();
+      cancelConfirmButton.focus();
+    });
+
+    rejectButton.addEventListener("click", function () {
+      pendingDecision = "reject";
+      hideToast();
+      renderDetail();
+      cancelConfirmButton.focus();
+    });
+
+    cancelConfirmButton.addEventListener("click", function () {
+      pendingDecision = null;
+      renderDetail();
+    });
+
+    doConfirmButton.addEventListener("click", submitDecision);
+
+    adminToastClose.addEventListener("click", hideToast);
+
+    statusTabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        currentTab = tab.dataset.tab;
+
+        statusTabs.forEach(function (otherTab) {
+          const isActive = otherTab === tab;
+          otherTab.classList.toggle("is-active", isActive);
+          otherTab.setAttribute("aria-pressed", String(isActive));
+        });
+
+        renderTable();
+      });
+    });
+
+    searchInput.addEventListener("input", renderTable);
+    citySelect.addEventListener("change", renderTable);
 
     // ADMIN LOGOUT
     if (logoutButton) {
@@ -585,9 +929,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // START DASHBOARD
-    checkAdminAccess().then(function (isAdmin) {
+    checkAdminAccess().then(async function (isAdmin) {
       if (isAdmin) {
-        loadApplications();
+        await loadCategories();
+        await loadApplications();
       }
     });
   }

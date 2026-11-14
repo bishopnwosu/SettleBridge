@@ -1,9 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
 
     <title>Admin Dashboard | SettleBridge</title>
 
@@ -15,87 +15,211 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 
-<body>
+<body class="sba-body">
 
+<!-- ADMIN HEADER -->
 <header>
-    <div class="container navbar">
-        <a href="index.html" class="logo">
-            Settle<span style="color:#16A085;">Bridge</span>
-        </a>
+    <div class="sba-header-inner">
+        <div class="sba-brand">
+            <a href="index.html" class="sba-logo">Settle<span>Bridge</span></a>
+            <span class="sba-pill">Admin</span>
+        </div>
 
-        <div class="nav-buttons">
-            <span>Administrator</span>
-            <button id="adminLogout" class="btn btn-outline" type="button">
-                Log Out
-            </button>
+        <div class="sba-header-actions">
+            <span class="sba-muted">Administrator</span>
+            <button id="adminLogout" class="sba-btn sba-btn-outline" type="button">Log out</button>
         </div>
     </div>
 </header>
 
-<main class="container" style="padding-top:50px; padding-bottom:70px;">
+<main class="sba-main">
 
-    <div style="margin-bottom:30px;">
-        <h1>Admin Dashboard</h1>
-        <p>Manage provider applications and monitor your marketplace.</p>
+    <!-- PAGE TITLE -->
+    <div class="sba-title-row">
+        <div>
+            <h1>Provider applications</h1>
+            <p>Review new providers. Approving or rejecting emails the provider straight away.</p>
+        </div>
+        <span class="sba-muted"><span id="totalApplications">0</span> applications in total</span>
     </div>
 
-    
-<!-- ADMIN SUMMARY CARDS -->
-<section class="admin-stats">
+    <!-- ERROR MESSAGES (hidden unless something goes wrong) -->
+    <p id="adminMessage" class="sba-alert" role="alert" hidden></p>
 
-    <div class="stat-card">
-        <h3>Total Applications</h3>
-        <p id="totalApplications">0</p>
-    </div>
-
-    <div class="stat-card">
-        <h3>Pending</h3>
-        <p id="pendingApplications">0</p>
-    </div>
-
-    <div class="stat-card">
-        <h3>Approved</h3>
-        <p id="approvedApplications">0</p>
-    </div>
-
-    <div class="stat-card">
-        <h3>Rejected</h3>
-        <p id="rejectedApplications">0</p>
-    </div>
-
-</section>
-
-
-    <section style="margin-bottom:35px;">
-        <section class="admin-section">
-    <h2>Provider Applications</h2>
-        <p>Review applications submitted by service providers.</p>
-
-        <div class="admin-table-wrapper">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th style="padding:14px; text-align:left;">Business</th>
-                        <th style="padding:14px; text-align:left;">Contact</th>
-                        <th style="padding:14px; text-align:left;">City</th>
-                        <th style="padding:14px; text-align:left;">Status</th>
-                        <th style="padding:14px; text-align:left;">Date</th>
-                        <th style="padding:14px; text-align:left;">Action</th>
-                    </tr>
-                </thead>
-
-                <tbody id="applicationsTable">
-                    <tr>
-                        <td colspan="6" style="padding:20px; text-align:center;">
-                            Loading applications...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- SUMMARY CARDS -->
+    <div class="sba-stats" role="group" aria-label="Summary">
+        <div class="sba-stat sba-stat-primary">
+            <span class="sba-stat-label">Waiting for review</span>
+            <span class="sba-stat-value" id="pendingApplications">0</span>
+            <span class="sba-stat-note">Oldest: <span id="oldestPending">none</span></span>
         </div>
 
-        <p id="adminMessage" style="margin-top:20px;"></p>
-    </section>
+        <div class="sba-stat">
+            <span class="sba-stat-label">Approved</span>
+            <span class="sba-stat-value sba-value-approved" id="approvedApplications">0</span>
+            <span class="sba-stat-note">Accepted providers</span>
+        </div>
+
+        <div class="sba-stat">
+            <span class="sba-stat-label">Rejected</span>
+            <span class="sba-stat-value sba-value-rejected" id="rejectedApplications">0</span>
+            <span class="sba-stat-note">Not accepted</span>
+        </div>
+
+        <div class="sba-stat">
+            <span class="sba-stat-label">Emails not sent</span>
+            <span class="sba-stat-value sba-value-warning" id="emailFailedApplications">0</span>
+            <span class="sba-stat-note">Contact these providers by hand</span>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="sba-toolbar">
+        <div class="sba-tabs" role="group" aria-label="Filter by status">
+            <button type="button" class="sba-tab is-active" data-tab="pending" aria-pressed="true">Pending <span class="sba-tab-count" data-count="pending">0</span></button>
+            <button type="button" class="sba-tab" data-tab="approved" aria-pressed="false">Approved <span class="sba-tab-count" data-count="approved">0</span></button>
+            <button type="button" class="sba-tab" data-tab="rejected" aria-pressed="false">Rejected <span class="sba-tab-count" data-count="rejected">0</span></button>
+            <button type="button" class="sba-tab" data-tab="all" aria-pressed="false">All <span class="sba-tab-count" data-count="all">0</span></button>
+        </div>
+
+        <div class="sba-filters">
+            <label class="sba-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                <span class="sba-visually-hidden">Search applications</span>
+                <input id="adminSearch" type="search" placeholder="Search business, name or email" autocomplete="off">
+            </label>
+
+            <label class="sba-city">City
+                <select id="adminCity">
+                    <option value="all">All cities</option>
+                </select>
+            </label>
+        </div>
+    </div>
+
+    <div class="sba-layout">
+
+        <!-- APPLICATIONS TABLE -->
+        <div class="sba-table-card" role="region" aria-label="Applications">
+            <div class="sba-table-scroll">
+                <table class="sba-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Business</th>
+                            <th scope="col">Service</th>
+                            <th scope="col">City</th>
+                            <th scope="col">Submitted</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="applicationsTable">
+                        <tr>
+                            <td colspan="5" class="sba-empty-cell">Loading applications...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="emptyList" class="sba-empty" hidden>
+                <p class="sba-strong">No applications match</p>
+                <p>Try another status, city or search.</p>
+            </div>
+        </div>
+
+        <!-- DETAILS PANEL -->
+        <aside class="sba-side" aria-label="Application details">
+
+            <div id="adminToast" class="sba-toast" role="status" hidden>
+                <span id="adminToastText"></span>
+                <button type="button" id="adminToastClose" aria-label="Dismiss message">&times;</button>
+            </div>
+
+            <div id="detailEmpty" class="sba-detail-empty">
+                <p class="sba-strong">Select an application</p>
+                <p>Its full details and review actions appear here.</p>
+            </div>
+
+            <div id="detailPanel" class="sba-detail" hidden>
+
+                <div class="sba-detail-head">
+                    <div class="sba-detail-top">
+                        <span id="detailStatus" class="sba-badge"></span>
+                        <span id="detailDate" class="sba-muted"></span>
+                    </div>
+                    <h2 id="detailBusiness"></h2>
+                    <p id="detailMeta" class="sba-muted"></p>
+                </div>
+
+                <div class="sba-detail-body">
+                    <div class="sba-group">
+                        <h3>Contact</h3>
+                        <dl class="sba-dl">
+                            <dt>Name</dt><dd id="detailContact" class="sba-strong"></dd>
+                            <dt>Email</dt><dd id="detailEmail"></dd>
+                            <dt>Phone</dt><dd id="detailPhone"></dd>
+                            <dt>WhatsApp</dt><dd id="detailWhatsapp"></dd>
+                        </dl>
+                    </div>
+
+                    <div class="sba-group">
+                        <h3>Business</h3>
+                        <dl class="sba-dl">
+                            <dt>Type</dt><dd id="detailBusinessType"></dd>
+                            <dt>Website</dt><dd id="detailWebsite"></dd>
+                            <dt>Reg. number</dt><dd id="detailRegNumber"></dd>
+                            <dt>Document</dt><dd id="detailDocument"></dd>
+                        </dl>
+                    </div>
+
+                    <div class="sba-group">
+                        <h3>Services</h3>
+                        <dl class="sba-dl">
+                            <dt>Pricing</dt><dd id="detailPricing"></dd>
+                            <dt>Languages</dt><dd id="detailLanguages"></dd>
+                            <dt>Service area</dt><dd id="detailArea"></dd>
+                        </dl>
+                        <p id="detailDescription" class="sba-description"></p>
+                    </div>
+                </div>
+
+                <div class="sba-detail-foot">
+
+                    <!-- Shown while the application is pending -->
+                    <div id="detailActions">
+                        <div class="sba-btn-row">
+                            <button type="button" id="approveButton" class="sba-btn sba-btn-approve">Approve</button>
+                            <button type="button" id="rejectButton" class="sba-btn sba-btn-reject">Reject</button>
+                        </div>
+                        <p class="sba-note">The provider gets an email as soon as you decide.</p>
+                    </div>
+
+                    <!-- Shown after clicking Approve or Reject -->
+                    <div id="detailConfirm" class="sba-confirm" role="alertdialog" aria-labelledby="confirmTitle" hidden>
+                        <p id="confirmTitle" class="sba-confirm-title"></p>
+                        <p id="confirmText"></p>
+                        <div class="sba-btn-row">
+                            <button type="button" id="cancelConfirmButton" class="sba-btn sba-btn-cancel">Cancel</button>
+                            <button type="button" id="doConfirmButton" class="sba-btn sba-btn-approve"></button>
+                        </div>
+                    </div>
+
+                    <!-- Shown once a decision has been made -->
+                    <div id="detailDecided" class="sba-decided" hidden>
+                        <p id="decidedText"></p>
+                        <p id="emailOk" class="sba-email-ok" hidden>&#10003; Decision email sent</p>
+                        <div id="emailFailed" class="sba-email-warning" hidden>
+                            <p class="sba-strong">The decision email was not sent</p>
+                            <p id="emailFailedText"></p>
+                        </div>
+                        <p id="emailUnknown" class="sba-email-unknown" hidden>No decision email on record. This application was reviewed before automatic emails were set up.</p>
+                    </div>
+
+                </div>
+            </div>
+
+        </aside>
+    </div>
 
 </main>
 
