@@ -936,4 +936,939 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   }
+
+  // =====================================
+  // 11. ADMIN GUIDES (BLOG) LIST
+  // =====================================
+
+  const blogPostsTable = document.querySelector("#blogPostsTable");
+
+  if (blogPostsTable) {
+    const blogAdminSupabase = window.supabase.createClient(
+      "https://jnvirsxymqdginyatyjq.supabase.co",
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
+    );
+
+    const blogAdminMessage = document.querySelector("#adminMessage");
+    const blogLogoutButton = document.querySelector("#adminLogout");
+    const postSearch = document.querySelector("#postSearch");
+    const postTabs = document.querySelectorAll("[data-post-tab]");
+    const postsEmpty = document.querySelector("#postsEmpty");
+
+    let allPosts = [];
+    let currentPostTab = "all";
+
+    function formatPostDate(value) {
+      if (!value) return "Not yet";
+
+      return new Date(value).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+
+    // CHECK ADMIN LOGIN AND PERMISSIONS
+    async function checkBlogAdminAccess() {
+      const { data: sessionData, error: sessionError } =
+        await blogAdminSupabase.auth.getSession();
+
+      if (sessionError || !sessionData.session) {
+        window.location.href = "login.html";
+        return false;
+      }
+
+      const { data: isAdmin, error: adminError } = await blogAdminSupabase.rpc(
+        "is_settlebridge_admin",
+      );
+
+      if (adminError || !isAdmin) {
+        alert("You do not have permission to access this page.");
+        await blogAdminSupabase.auth.signOut();
+        window.location.href = "login.html";
+        return false;
+      }
+
+      return true;
+    }
+
+    // LOAD ALL POSTS (drafts included: only admins are allowed to see them)
+    async function loadPosts() {
+      const { data, error } = await blogAdminSupabase
+        .from("blog_posts")
+        .select("id, title, slug, category, status, published_at, updated_at")
+        .order("updated_at", { ascending: false });
+
+      if (error) {
+        console.error("Guides error:", error);
+        blogAdminMessage.textContent = "Unable to load guides. Please refresh the page.";
+        blogAdminMessage.hidden = false;
+        blogPostsTable.replaceChildren();
+        return;
+      }
+
+      allPosts = data || [];
+      blogAdminMessage.hidden = true;
+
+      updatePostSummary();
+      renderPostsTable();
+    }
+
+    // SUMMARY CARDS AND TAB COUNTS
+    function updatePostSummary() {
+      const published = allPosts.filter(function (post) {
+        return post.status === "published";
+      });
+
+      const counts = {
+        all: allPosts.length,
+        published: published.length,
+        draft: allPosts.length - published.length,
+      };
+
+      document.querySelector("#publishedPostsCount").textContent = counts.published;
+      document.querySelector("#draftPostsCount").textContent = counts.draft;
+
+      document.querySelectorAll("[data-post-count]").forEach(function (element) {
+        element.textContent = counts[element.dataset.postCount];
+      });
+
+      const latest = published
+        .filter(function (post) {
+          return post.published_at;
+        })
+        .sort(function (a, b) {
+          return new Date(b.published_at) - new Date(a.published_at);
+        })[0];
+
+      document.querySelector("#lastPublishedDate").textContent = latest
+        ? formatPostDate(latest.published_at)
+        : "None yet";
+
+      document.querySelector("#lastPublishedTitle").textContent = latest
+        ? latest.title
+        : "Publish your first guide";
+    }
+
+    // DISPLAY THE TABLE
+    function renderPostsTable() {
+      const search = postSearch.value.trim().toLowerCase();
+
+      const posts = allPosts.filter(function (post) {
+        if (currentPostTab !== "all" && post.status !== currentPostTab) return false;
+        if (search && post.title.toLowerCase().indexOf(search) === -1) return false;
+        return true;
+      });
+
+      blogPostsTable.replaceChildren();
+      postsEmpty.hidden = posts.length > 0;
+
+      if (allPosts.length === 0) {
+        document.querySelector("#postsEmptyTitle").textContent = "No guides yet";
+        document.querySelector("#postsEmptyText").textContent =
+          'Click "New guide" to write your first one.';
+      } else {
+        document.querySelector("#postsEmptyTitle").textContent = "No guides match";
+        document.querySelector("#postsEmptyText").textContent =
+          "Try another filter or search.";
+      }
+
+      posts.forEach(function (post) {
+        const editUrl = "admin-blog-edit.html?id=" + encodeURIComponent(post.id);
+        const isPublished = post.status === "published";
+
+        const row = document.createElement("tr");
+        row.className = "sba-row-static";
+
+        // Title and web address
+        const titleCell = document.createElement("td");
+        const titleLink = document.createElement("a");
+        titleLink.href = editUrl;
+        titleLink.className = "sba-link";
+        titleLink.textContent = post.title;
+
+        const slugLine = document.createElement("div");
+        slugLine.className = "sba-sub";
+        slugLine.textContent = "guide.html?slug=" + post.slug;
+
+        titleCell.appendChild(titleLink);
+        titleCell.appendChild(slugLine);
+
+        // Category
+        const categoryCell = document.createElement("td");
+        categoryCell.textContent = post.category;
+
+        // Status
+        const statusCell = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className = "sba-badge " + (isPublished ? "sba-badge-approved" : "sba-badge-draft");
+        badge.textContent = isPublished ? "Published" : "Draft";
+        statusCell.appendChild(badge);
+
+        // Last updated
+        const updatedCell = document.createElement("td");
+        updatedCell.className = "sba-nowrap";
+        updatedCell.textContent = formatPostDate(post.updated_at);
+
+        // Actions
+        const actionsCell = document.createElement("td");
+        actionsCell.className = "sba-align-right sba-nowrap";
+
+        const editLink = document.createElement("a");
+        editLink.href = editUrl;
+        editLink.className = "sba-small-btn";
+        editLink.textContent = "Edit";
+        actionsCell.appendChild(editLink);
+
+        if (isPublished) {
+          const viewLink = document.createElement("a");
+          viewLink.href = "guide.html?slug=" + encodeURIComponent(post.slug);
+          viewLink.className = "sba-text-link sba-view-link";
+          viewLink.textContent = "View";
+          actionsCell.appendChild(viewLink);
+        }
+
+        row.appendChild(titleCell);
+        row.appendChild(categoryCell);
+        row.appendChild(statusCell);
+        row.appendChild(updatedCell);
+        row.appendChild(actionsCell);
+
+        blogPostsTable.appendChild(row);
+      });
+    }
+
+    // FILTERS
+    postTabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        currentPostTab = tab.dataset.postTab;
+
+        postTabs.forEach(function (otherTab) {
+          const isActive = otherTab === tab;
+          otherTab.classList.toggle("is-active", isActive);
+          otherTab.setAttribute("aria-pressed", String(isActive));
+        });
+
+        renderPostsTable();
+      });
+    });
+
+    postSearch.addEventListener("input", renderPostsTable);
+
+    // LOGOUT
+    if (blogLogoutButton) {
+      blogLogoutButton.addEventListener("click", async function () {
+        const { error } = await blogAdminSupabase.auth.signOut();
+
+        if (error) {
+          alert("Unable to log out. Please try again.");
+          return;
+        }
+
+        window.location.href = "login.html";
+      });
+    }
+
+    // START
+    checkBlogAdminAccess().then(function (isAdmin) {
+      if (isAdmin) {
+        loadPosts();
+      }
+    });
+  }
+
+  // =====================================
+  // 12. ADMIN GUIDE EDITOR
+  // =====================================
+
+  const postForm = document.querySelector("#postForm");
+
+  if (postForm) {
+    const editorSupabase = window.supabase.createClient(
+      "https://jnvirsxymqdginyatyjq.supabase.co",
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
+    );
+
+    const BLOG_IMAGE_BUCKET = "blog-images";
+    const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
+    const IMAGE_EXTENSIONS = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+    };
+    const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+    function byId(id) {
+      return document.getElementById(id);
+    }
+
+    // PAGE ELEMENTS
+    const editorLogoutButton = byId("adminLogout");
+    const editorHeading = byId("editorHeading");
+    const editorStatusBadge = byId("editorStatusBadge");
+    const saveStatus = byId("saveStatus");
+    const viewLiveLink = byId("viewLiveLink");
+    const unpublishButton = byId("unpublishButton");
+    const saveDraftButton = byId("saveDraftButton");
+    const publishButton = byId("publishButton");
+    const editorMessage = byId("editorMessage");
+    const editorMessageText = byId("editorMessageText");
+    const editorMessageClose = byId("editorMessageClose");
+
+    const postTitle = byId("postTitle");
+    const postSummary = byId("postSummary");
+    const summaryCount = byId("summaryCount");
+    const postContent = byId("postContent");
+    const writeTab = byId("writeTab");
+    const previewTab = byId("previewTab");
+    const writePanel = byId("writePanel");
+    const previewPanel = byId("previewPanel");
+    const formatToolbar = byId("formatToolbar");
+
+    const postSlug = byId("postSlug");
+    const slugWarning = byId("slugWarning");
+    const postCategory = byId("postCategory");
+    const coverImage = byId("coverImage");
+    const coverPlaceholder = byId("coverPlaceholder");
+    const coverInput = byId("coverInput");
+    const coverUploadButton = byId("coverUploadButton");
+    const coverRemoveButton = byId("coverRemoveButton");
+    const coverAlt = byId("coverAlt");
+
+    const seoUrl = byId("seoUrl");
+    const seoTitle = byId("seoTitle");
+    const seoSummary = byId("seoSummary");
+
+    const deleteCard = byId("deleteCard");
+    const deleteStart = byId("deleteStart");
+    const deleteConfirm = byId("deleteConfirm");
+    const deleteButton = byId("deleteButton");
+    const deleteCancelButton = byId("deleteCancelButton");
+    const deleteConfirmButton = byId("deleteConfirmButton");
+
+    // EDITOR STATE
+    let postId = new URLSearchParams(window.location.search).get("id");
+    let savedPost = null; // the guide exactly as it is in the database
+    let coverImagePath = null; // the image currently shown in the editor
+    let imagesToDelete = []; // old images to remove after the next successful save
+    let slugEditedByHand = false;
+    let hasUnsavedChanges = false;
+    let isBusy = false;
+
+    // SMALL HELPERS
+    function formatEditorDate(value) {
+      if (!value) return "Not yet";
+
+      return new Date(value).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+
+    function makeSlug(text) {
+      return text
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "") // removes accents: é -> e
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 80)
+        .replace(/-+$/g, "");
+    }
+
+    // Turns Markdown into safe HTML. DOMPurify removes scripts and unsafe code.
+    function renderSafeMarkdown(markdown) {
+      if (!window.marked || !window.DOMPurify) return null;
+      return window.DOMPurify.sanitize(window.marked.parse(markdown || ""));
+    }
+
+    function getImageUrl(path) {
+      return editorSupabase.storage.from(BLOG_IMAGE_BUCKET).getPublicUrl(path).data
+        .publicUrl;
+    }
+
+    function showEditorMessage(text, kind) {
+      editorMessageText.textContent = text;
+      editorMessage.className = "sba-toast sba-toast-" + kind;
+      editorMessage.hidden = false;
+      editorMessage.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function hideEditorMessage() {
+      editorMessage.hidden = true;
+    }
+
+    function markUnsaved() {
+      hasUnsavedChanges = true;
+      saveStatus.textContent = "Unsaved changes";
+    }
+
+    function setBusy(busy) {
+      isBusy = busy;
+      [
+        saveDraftButton,
+        publishButton,
+        unpublishButton,
+        coverUploadButton,
+        coverRemoveButton,
+        deleteButton,
+        deleteConfirmButton,
+        deleteCancelButton,
+      ].forEach(function (button) {
+        button.disabled = busy;
+      });
+    }
+
+    // UPDATE THE SCREEN
+    function updateStatusDisplay() {
+      const isPublished = !!savedPost && savedPost.status === "published";
+
+      editorHeading.textContent = postId ? "Edit guide" : "New guide";
+      document.title =
+        (postId ? "Edit guide" : "New guide") + " | SettleBridge Admin";
+
+      editorStatusBadge.textContent = isPublished ? "Published" : "Draft";
+      editorStatusBadge.className =
+        "sba-badge " + (isPublished ? "sba-badge-approved" : "sba-badge-draft");
+
+      byId("infoStatus").textContent = isPublished ? "Published" : "Draft";
+      byId("infoCreated").textContent = savedPost
+        ? formatEditorDate(savedPost.created_at)
+        : "Not saved yet";
+      byId("infoPublished").textContent = savedPost
+        ? formatEditorDate(savedPost.published_at)
+        : "Not yet";
+
+      publishButton.textContent = isPublished ? "Update guide" : "Publish";
+      saveDraftButton.hidden = isPublished;
+      unpublishButton.hidden = !isPublished;
+
+      viewLiveLink.hidden = !isPublished;
+      if (isPublished) {
+        viewLiveLink.href = "guide.html?slug=" + encodeURIComponent(savedPost.slug);
+      }
+
+      slugWarning.hidden = !isPublished;
+      deleteCard.hidden = !postId;
+    }
+
+    function updateSummaryCount() {
+      const length = postSummary.value.length;
+      summaryCount.textContent = length + " / 160";
+      summaryCount.classList.toggle("is-over", length > 160);
+    }
+
+    function updateSeoPreview() {
+      seoUrl.textContent =
+        "settlebridgee.netlify.app › guide.html?slug=" + (postSlug.value || "...");
+      seoTitle.textContent = (postTitle.value.trim() || "Guide title") + " | SettleBridge";
+      seoSummary.textContent =
+        postSummary.value.trim() || "Your summary will appear here.";
+    }
+
+    function updateCoverDisplay() {
+      if (coverImagePath) {
+        coverImage.src = getImageUrl(coverImagePath);
+        coverImage.alt = coverAlt.value.trim();
+        coverImage.hidden = false;
+        coverPlaceholder.hidden = true;
+        coverRemoveButton.hidden = false;
+        coverUploadButton.textContent = "Replace image";
+      } else {
+        coverImage.removeAttribute("src");
+        coverImage.hidden = true;
+        coverPlaceholder.hidden = false;
+        coverRemoveButton.hidden = true;
+        coverUploadButton.textContent = "Upload image";
+      }
+    }
+
+    function updatePreview() {
+      const safeHtml = renderSafeMarkdown(postContent.value);
+
+      if (safeHtml === null) {
+        // The Markdown tools did not load: show plain text instead
+        previewPanel.textContent = postContent.value;
+        return;
+      }
+
+      previewPanel.innerHTML = safeHtml || "<p>Nothing to preview yet.</p>";
+    }
+
+    function updateEverything() {
+      updateStatusDisplay();
+      updateSummaryCount();
+      updateSeoPreview();
+      updateCoverDisplay();
+    }
+
+    // CHECK THE GUIDE BEFORE SAVING
+    function findProblem(forPublishing) {
+      const title = postTitle.value.trim();
+      const slug = postSlug.value.trim();
+
+      if (title.length < 3) return "Please add a title (at least 3 characters).";
+      if (title.length > 150) return "The title is too long (150 characters maximum).";
+      if (!slug) return "Please add a web address.";
+      if (slug.length > 80 || !SLUG_PATTERN.test(slug)) {
+        return "The web address can only use lowercase letters, numbers and single dashes.";
+      }
+      if (postSummary.value.trim().length > 300) {
+        return "The summary is too long (300 characters maximum).";
+      }
+
+      if (forPublishing) {
+        if (!postSummary.value.trim()) return "Please add a summary before publishing.";
+        if (postContent.value.trim().length < 50) {
+          return "Please write the guide before publishing (at least 50 characters).";
+        }
+        if (coverImagePath && !coverAlt.value.trim()) {
+          return "Please describe the cover image before publishing.";
+        }
+      }
+
+      return null;
+    }
+
+    // REMOVE OLD COVER IMAGES THAT ARE NO LONGER USED
+    async function deleteImages(paths) {
+      const unique = paths.filter(function (path, index) {
+        return path && paths.indexOf(path) === index;
+      });
+
+      if (unique.length === 0) return;
+
+      const { error } = await editorSupabase.storage
+        .from(BLOG_IMAGE_BUCKET)
+        .remove(unique);
+
+      if (error) console.error("Image delete error:", error);
+    }
+
+    // Called before the current cover is replaced or removed
+    async function releaseCurrentCover() {
+      if (!coverImagePath) return;
+
+      const savedPath = savedPost ? savedPost.cover_image_path : null;
+
+      if (coverImagePath === savedPath) {
+        // Still used by the saved guide: delete it only after the next save
+        imagesToDelete.push(coverImagePath);
+      } else {
+        // Uploaded but never saved: safe to delete now
+        await deleteImages([coverImagePath]);
+      }
+    }
+
+    // SAVE (status is "draft" or "published")
+    async function saveGuide(newStatus) {
+      if (isBusy) return;
+
+      const forPublishing = newStatus === "published";
+      const problem = findProblem(forPublishing);
+
+      if (problem) {
+        showEditorMessage(problem, "error");
+        return;
+      }
+
+      const guide = {
+        title: postTitle.value.trim(),
+        slug: postSlug.value.trim(),
+        summary: postSummary.value.trim() || null,
+        content: postContent.value,
+        category: postCategory.value,
+        cover_image_path: coverImagePath,
+        cover_image_alt: coverAlt.value.trim() || null,
+        status: newStatus,
+      };
+
+      const wasPublished = !!savedPost && savedPost.status === "published";
+
+      setBusy(true);
+      hideEditorMessage();
+      saveStatus.textContent = "Saving...";
+
+      try {
+        const request = postId
+          ? editorSupabase.from("blog_posts").update(guide).eq("id", postId)
+          : editorSupabase.from("blog_posts").insert(guide);
+
+        const { data, error } = await request.select().single();
+
+        if (error) {
+          console.error("Save error:", error);
+          saveStatus.textContent = "Not saved";
+          showEditorMessage(
+            error.code === "23505"
+              ? "Another guide already uses this web address. Please change it."
+              : "Could not save this guide. Please try again.",
+            "error",
+          );
+          return;
+        }
+
+        savedPost = data;
+        postId = data.id;
+        hasUnsavedChanges = false;
+
+        // Put the id in the address bar, so a refresh reopens this guide
+        window.history.replaceState(
+          null,
+          "",
+          "admin-blog-edit.html?id=" + encodeURIComponent(postId),
+        );
+
+        await deleteImages(imagesToDelete);
+        imagesToDelete = [];
+
+        updateStatusDisplay();
+        saveStatus.textContent =
+          "Saved at " +
+          new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+        let message = "Draft saved.";
+        if (forPublishing && !wasPublished) {
+          message = "Guide published. It is now live on the website.";
+        } else if (forPublishing && wasPublished) {
+          message = "Guide updated on the website.";
+        } else if (!forPublishing && wasPublished) {
+          message = "Guide unpublished. It is now hidden from the website.";
+        }
+
+        showEditorMessage(message, "success");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    // LOAD AN EXISTING GUIDE (or start a new one)
+    async function loadGuide() {
+      if (!postId) {
+        updateEverything();
+        updatePreview();
+        postTitle.focus();
+        return;
+      }
+
+      const { data, error } = await editorSupabase
+        .from("blog_posts")
+        .select("*")
+        .eq("id", postId)
+        .maybeSingle();
+
+      if (error || !data) {
+        console.error("Load error:", error);
+        showEditorMessage(
+          "This guide could not be found. It may have been deleted.",
+          "error",
+        );
+        postForm.querySelectorAll("input, textarea, select, button").forEach(function (field) {
+          field.disabled = true;
+        });
+        saveDraftButton.disabled = true;
+        publishButton.disabled = true;
+        return;
+      }
+
+      savedPost = data;
+      slugEditedByHand = true; // never change an existing guide's address automatically
+
+      postTitle.value = data.title || "";
+      postSlug.value = data.slug || "";
+      postSummary.value = data.summary || "";
+      postContent.value = data.content || "";
+      postCategory.value = data.category || "Getting started";
+      coverAlt.value = data.cover_image_alt || "";
+      coverImagePath = data.cover_image_path || null;
+
+      updateEverything();
+      updatePreview();
+
+      hasUnsavedChanges = false;
+      saveStatus.textContent = "All changes saved";
+    }
+
+    // CHECK ADMIN LOGIN AND PERMISSIONS
+    async function checkEditorAdminAccess() {
+      const { data: sessionData, error: sessionError } =
+        await editorSupabase.auth.getSession();
+
+      if (sessionError || !sessionData.session) {
+        window.location.href = "login.html";
+        return false;
+      }
+
+      const { data: isAdmin, error: adminError } = await editorSupabase.rpc(
+        "is_settlebridge_admin",
+      );
+
+      if (adminError || !isAdmin) {
+        alert("You do not have permission to access this page.");
+        await editorSupabase.auth.signOut();
+        window.location.href = "login.html";
+        return false;
+      }
+
+      return true;
+    }
+
+    // MARKDOWN FORMATTING BUTTONS
+    function wrapSelection(before, after, placeholder) {
+      const start = postContent.selectionStart;
+      const end = postContent.selectionEnd;
+      const selected = postContent.value.slice(start, end) || placeholder;
+
+      postContent.setRangeText(before + selected + after, start, end, "end");
+      postContent.setSelectionRange(
+        start + before.length,
+        start + before.length + selected.length,
+      );
+      postContent.focus();
+      markUnsaved();
+    }
+
+    function prefixLines(prefix) {
+      const value = postContent.value;
+      const start = value.lastIndexOf("\n", postContent.selectionStart - 1) + 1;
+      const end = postContent.selectionEnd;
+
+      const lines = value
+        .slice(start, end)
+        .split("\n")
+        .map(function (line) {
+          return prefix + line.replace(/^(#{1,6}\s|-\s)/, "");
+        });
+
+      postContent.setRangeText(lines.join("\n"), start, end, "end");
+      postContent.focus();
+      markUnsaved();
+    }
+
+    formatToolbar.addEventListener("click", function (event) {
+      const button = event.target.closest("[data-format]");
+      if (!button) return;
+
+      const format = button.dataset.format;
+
+      if (format === "bold") wrapSelection("**", "**", "bold text");
+      if (format === "italic") wrapSelection("_", "_", "italic text");
+      if (format === "heading") prefixLines("## ");
+      if (format === "list") prefixLines("- ");
+      if (format === "link") wrapSelection("[", "](https://)", "link text");
+    });
+
+    // WRITE / PREVIEW SWITCH
+    function showEditorMode(mode) {
+      const isWrite = mode === "write";
+
+      writePanel.hidden = !isWrite;
+      previewPanel.hidden = isWrite;
+      formatToolbar.hidden = !isWrite;
+
+      writeTab.classList.toggle("is-active", isWrite);
+      previewTab.classList.toggle("is-active", !isWrite);
+      writeTab.setAttribute("aria-pressed", String(isWrite));
+      previewTab.setAttribute("aria-pressed", String(!isWrite));
+
+      if (!isWrite) updatePreview();
+    }
+
+    writeTab.addEventListener("click", function () {
+      showEditorMode("write");
+    });
+
+    previewTab.addEventListener("click", function () {
+      showEditorMode("preview");
+    });
+
+    // TYPING IN THE FORM
+    postTitle.addEventListener("input", function () {
+      if (!slugEditedByHand) postSlug.value = makeSlug(postTitle.value);
+      updateSeoPreview();
+      markUnsaved();
+    });
+
+    postSlug.addEventListener("input", function () {
+      slugEditedByHand = true;
+      updateSeoPreview();
+      markUnsaved();
+    });
+
+    postSlug.addEventListener("blur", function () {
+      postSlug.value = makeSlug(postSlug.value);
+      updateSeoPreview();
+    });
+
+    postSummary.addEventListener("input", function () {
+      updateSummaryCount();
+      updateSeoPreview();
+      markUnsaved();
+    });
+
+    postContent.addEventListener("input", markUnsaved);
+    postCategory.addEventListener("change", markUnsaved);
+
+    coverAlt.addEventListener("input", function () {
+      coverImage.alt = coverAlt.value.trim();
+      markUnsaved();
+    });
+
+    // Stop the Enter key from submitting the form
+    postForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+    });
+
+    // COVER IMAGE
+    coverUploadButton.addEventListener("click", function () {
+      coverInput.click();
+    });
+
+    coverInput.addEventListener("change", async function () {
+      const file = coverInput.files[0];
+      coverInput.value = "";
+
+      if (!file) return;
+
+      const extension = IMAGE_EXTENSIONS[file.type];
+
+      if (!extension) {
+        showEditorMessage("Please choose a JPG, PNG or WebP image.", "error");
+        return;
+      }
+
+      if (file.size > MAX_IMAGE_BYTES) {
+        showEditorMessage("This image is larger than 2 MB. Please choose a smaller one.", "error");
+        return;
+      }
+
+      setBusy(true);
+      coverUploadButton.textContent = "Uploading...";
+
+      try {
+        const newPath = "covers/" + crypto.randomUUID() + "." + extension;
+
+        const { error } = await editorSupabase.storage
+          .from(BLOG_IMAGE_BUCKET)
+          .upload(newPath, file, {
+            contentType: file.type,
+            cacheControl: "31536000",
+            upsert: false,
+          });
+
+        if (error) {
+          console.error("Upload error:", error);
+          showEditorMessage("Could not upload this image. Please try again.", "error");
+          return;
+        }
+
+        await releaseCurrentCover();
+        coverImagePath = newPath;
+        markUnsaved();
+        showEditorMessage("Image uploaded. Save the guide to keep it.", "success");
+      } finally {
+        setBusy(false);
+        updateCoverDisplay();
+      }
+    });
+
+    coverRemoveButton.addEventListener("click", async function () {
+      setBusy(true);
+
+      try {
+        await releaseCurrentCover();
+        coverImagePath = null;
+        markUnsaved();
+      } finally {
+        setBusy(false);
+        updateCoverDisplay();
+      }
+    });
+
+    // SAVE BUTTONS
+    saveDraftButton.addEventListener("click", function () {
+      saveGuide("draft");
+    });
+
+    publishButton.addEventListener("click", function () {
+      saveGuide("published");
+    });
+
+    unpublishButton.addEventListener("click", function () {
+      saveGuide("draft");
+    });
+
+    // DELETE
+    deleteButton.addEventListener("click", function () {
+      deleteStart.hidden = true;
+      deleteConfirm.hidden = false;
+      deleteCancelButton.focus();
+    });
+
+    deleteCancelButton.addEventListener("click", function () {
+      deleteConfirm.hidden = true;
+      deleteStart.hidden = false;
+    });
+
+    deleteConfirmButton.addEventListener("click", async function () {
+      if (isBusy || !postId) return;
+
+      setBusy(true);
+
+      try {
+        const { data, error } = await editorSupabase
+          .from("blog_posts")
+          .delete()
+          .eq("id", postId)
+          .select("id");
+
+        if (error || !data || data.length === 0) {
+          console.error("Delete error:", error);
+          showEditorMessage("Could not delete this guide. Please try again.", "error");
+          return;
+        }
+
+        await deleteImages(
+          [savedPost && savedPost.cover_image_path, coverImagePath].concat(imagesToDelete),
+        );
+
+        hasUnsavedChanges = false;
+        window.location.href = "admin-blog.html";
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    // MESSAGES
+    editorMessageClose.addEventListener("click", hideEditorMessage);
+
+    // WARN BEFORE LEAVING WITH UNSAVED CHANGES
+    window.addEventListener("beforeunload", function (event) {
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    });
+
+    // LOGOUT
+    if (editorLogoutButton) {
+      editorLogoutButton.addEventListener("click", async function () {
+        if (hasUnsavedChanges && !confirm("You have unsaved changes. Log out anyway?")) {
+          return;
+        }
+
+        hasUnsavedChanges = false;
+        await editorSupabase.auth.signOut();
+        window.location.href = "login.html";
+      });
+    }
+
+    // START
+    checkEditorAdminAccess().then(function (isAdmin) {
+      if (isAdmin) {
+        loadGuide();
+      }
+    });
+  }
 });

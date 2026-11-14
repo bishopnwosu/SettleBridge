@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+
+    <title>Edit guide | SettleBridge Admin</title>
+
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="sba-body">
+
+<!-- ADMIN HEADER -->
+<header>
+    <div class="sba-header-inner">
+        <div class="sba-brand">
+            <a href="index.html" class="sba-logo">Settle<span>Bridge</span></a>
+            <span class="sba-pill">Admin</span>
+
+            <nav class="sba-admin-nav" aria-label="Admin sections">
+                <a href="admin.html">Applications</a>
+                <a href="admin-blog.html" aria-current="page">Guides</a>
+            </nav>
+        </div>
+
+        <div class="sba-header-actions">
+            <button id="adminLogout" class="sba-btn sba-btn-outline" type="button">Log out</button>
+        </div>
+    </div>
+</header>
+
+<main class="sba-main">
+
+    <!-- TOP BAR -->
+    <div class="sba-title-row">
+        <div class="sba-editor-heading">
+            <a href="admin-blog.html" class="sba-text-link">&larr; All guides</a>
+            <div class="sba-editor-title-line">
+                <h1 id="editorHeading">New guide</h1>
+                <span id="editorStatusBadge" class="sba-badge sba-badge-draft">Draft</span>
+            </div>
+        </div>
+
+        <div class="sba-editor-actions">
+            <span id="saveStatus" class="sba-muted">Not saved yet</span>
+            <a id="viewLiveLink" href="#" class="sba-text-link" target="_blank" rel="noopener" hidden>View on website</a>
+            <button type="button" id="unpublishButton" class="sba-btn sba-btn-outline" hidden>Unpublish</button>
+            <button type="button" id="saveDraftButton" class="sba-btn sba-btn-outline">Save draft</button>
+            <button type="button" id="publishButton" class="sba-btn sba-btn-approve">Publish</button>
+        </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div id="editorMessage" class="sba-toast" role="status" hidden>
+        <span id="editorMessageText"></span>
+        <button type="button" id="editorMessageClose" aria-label="Dismiss message">&times;</button>
+    </div>
+
+    <form id="postForm" class="sba-editor-layout" novalidate>
+
+        <!-- MAIN COLUMN -->
+        <div class="sba-editor-main">
+
+            <div class="sba-card sba-field-stack">
+                <label class="sba-field">
+                    <span class="sba-field-label">Title</span>
+                    <input type="text" id="postTitle" class="sba-input sba-input-title" maxlength="150" placeholder="For example: How to get your NIF in Portugal" required>
+                </label>
+
+                <label class="sba-field">
+                    <span class="sba-field-label sba-field-label-row">
+                        Summary
+                        <span id="summaryCount" class="sba-counter">0 / 160</span>
+                    </span>
+                    <textarea id="postSummary" class="sba-input" rows="2" maxlength="300" placeholder="One or two sentences about what this guide covers."></textarea>
+                    <span class="sba-hint">Shown on the Guides page and in Google results. Aim for 160 characters or fewer.</span>
+                </label>
+            </div>
+
+            <div class="sba-card sba-card-flush">
+                <div class="sba-editor-bar">
+                    <div class="sba-segmented" role="group" aria-label="Editor mode">
+                        <button type="button" id="writeTab" class="is-active" aria-pressed="true">Write</button>
+                        <button type="button" id="previewTab" aria-pressed="false">Preview</button>
+                    </div>
+
+                    <div id="formatToolbar" class="sba-format-toolbar" role="toolbar" aria-label="Formatting">
+                        <button type="button" data-format="bold" aria-label="Bold"><strong>B</strong></button>
+                        <button type="button" data-format="italic" aria-label="Italic"><em>I</em></button>
+                        <button type="button" data-format="heading" aria-label="Heading">H2</button>
+                        <button type="button" data-format="list" aria-label="Bulleted list">&bull; List</button>
+                        <button type="button" data-format="link" aria-label="Link">Link</button>
+                    </div>
+                </div>
+
+                <div id="writePanel">
+                    <label>
+                        <span class="sba-visually-hidden">Guide content</span>
+                        <textarea id="postContent" class="sba-content-input" rows="20" maxlength="50000" placeholder="Write your guide here..."></textarea>
+                    </label>
+                    <p class="sba-editor-help">Written in Markdown: <strong>## Heading</strong>, <strong>**bold**</strong>, <strong>- list item</strong>, <strong>[link text](https://...)</strong>. Scripts and unsafe code are removed before display.</p>
+                </div>
+
+                <div id="previewPanel" class="sba-article-body sba-preview-panel" hidden></div>
+            </div>
+        </div>
+
+        <!-- SIDEBAR -->
+        <aside class="sba-editor-side" aria-label="Guide settings">
+
+            <div class="sba-card sba-field-stack">
+                <h2 class="sba-card-heading">Publishing</h2>
+                <dl class="sba-dl">
+                    <dt>Status</dt><dd id="infoStatus">Draft</dd>
+                    <dt>Created</dt><dd id="infoCreated">Not saved yet</dd>
+                    <dt>Published</dt><dd id="infoPublished">Not yet</dd>
+                </dl>
+
+                <label class="sba-field">
+                    <span class="sba-field-label">Web address</span>
+                    <span class="sba-input-group">
+                        <span class="sba-input-prefix">?slug=</span>
+                        <input type="text" id="postSlug" maxlength="80" autocomplete="off" spellcheck="false">
+                    </span>
+                    <span class="sba-hint">Lowercase letters, numbers and dashes. Filled in from the title.</span>
+                    <span id="slugWarning" class="sba-hint sba-hint-warning" hidden>This guide is live. Changing its address breaks any links already shared.</span>
+                </label>
+            </div>
+
+            <div class="sba-card sba-field-stack">
+                <h2 class="sba-card-heading">Cover image</h2>
+
+                <div class="sba-cover-box">
+                    <img id="coverImage" alt="" hidden>
+                    <span id="coverPlaceholder">No image yet</span>
+                </div>
+
+                <input type="file" id="coverInput" class="sba-visually-hidden" accept="image/jpeg,image/png,image/webp" tabindex="-1">
+
+                <div class="sba-btn-row">
+                    <button type="button" id="coverUploadButton" class="sba-btn sba-btn-cancel">Upload image</button>
+                    <button type="button" id="coverRemoveButton" class="sba-btn sba-btn-text-danger" hidden>Remove</button>
+                </div>
+
+                <label class="sba-field">
+                    <span class="sba-field-label">Image description</span>
+                    <input type="text" id="coverAlt" class="sba-input" maxlength="200" placeholder="For example: Documents on a desk">
+                    <span class="sba-hint">Read aloud by screen readers. JPG, PNG or WebP, up to 2 MB.</span>
+                </label>
+            </div>
+
+            <div class="sba-card sba-field-stack">
+                <label class="sba-field">
+                    <span class="sba-card-heading">Category</span>
+                    <select id="postCategory" class="sba-input">
+                        <option>Getting started</option>
+                        <option>Paperwork</option>
+                        <option>Housing</option>
+                        <option>City guides</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="sba-card sba-field-stack">
+                <h2 class="sba-card-heading">Google preview</h2>
+                <div class="sba-seo">
+                    <span id="seoUrl" class="sba-seo-url"></span>
+                    <span id="seoTitle" class="sba-seo-title"></span>
+                    <span id="seoSummary" class="sba-seo-summary"></span>
+                </div>
+            </div>
+
+            <div id="deleteCard" class="sba-card sba-danger-card" hidden>
+                <div id="deleteStart" class="sba-danger-row">
+                    <span class="sba-muted">Deleting a guide can't be undone.</span>
+                    <button type="button" id="deleteButton" class="sba-btn sba-btn-reject">Delete guide</button>
+                </div>
+
+                <div id="deleteConfirm" class="sba-confirm" role="alertdialog" aria-labelledby="deleteConfirmTitle" hidden>
+                    <p id="deleteConfirmTitle" class="sba-confirm-title">Delete this guide for good?</p>
+                    <p>It will be removed from the website and from the admin. Its cover image is deleted too.</p>
+                    <div class="sba-btn-row">
+                        <button type="button" id="deleteCancelButton" class="sba-btn sba-btn-cancel">Cancel</button>
+                        <button type="button" id="deleteConfirmButton" class="sba-btn sba-btn-reject-solid">Yes, delete</button>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+    </form>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

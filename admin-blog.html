@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+
+    <title>Guides | SettleBridge Admin</title>
+
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="sba-body">
+
+<!-- ADMIN HEADER -->
+<header>
+    <div class="sba-header-inner">
+        <div class="sba-brand">
+            <a href="index.html" class="sba-logo">Settle<span>Bridge</span></a>
+            <span class="sba-pill">Admin</span>
+
+            <nav class="sba-admin-nav" aria-label="Admin sections">
+                <a href="admin.html">Applications</a>
+                <a href="admin-blog.html" aria-current="page">Guides</a>
+            </nav>
+        </div>
+
+        <div class="sba-header-actions">
+            <a href="guides.html" class="sba-text-link">View guides</a>
+            <button id="adminLogout" class="sba-btn sba-btn-outline" type="button">Log out</button>
+        </div>
+    </div>
+</header>
+
+<main class="sba-main">
+
+    <!-- PAGE TITLE -->
+    <div class="sba-title-row">
+        <div>
+            <h1>Guides</h1>
+            <p>Write guides for newcomers. Only published guides appear on the website.</p>
+        </div>
+        <a href="admin-blog-edit.html" class="sba-btn sba-btn-approve sba-btn-link">+ New guide</a>
+    </div>
+
+    <!-- ERROR MESSAGES (hidden unless something goes wrong) -->
+    <p id="adminMessage" class="sba-alert" role="alert" hidden></p>
+
+    <!-- SUMMARY CARDS -->
+    <div class="sba-stats" role="group" aria-label="Summary">
+        <div class="sba-stat sba-stat-primary">
+            <span class="sba-stat-label">Published</span>
+            <span class="sba-stat-value" id="publishedPostsCount">0</span>
+            <span class="sba-stat-note">Live on the website</span>
+        </div>
+
+        <div class="sba-stat">
+            <span class="sba-stat-label">Drafts</span>
+            <span class="sba-stat-value" id="draftPostsCount">0</span>
+            <span class="sba-stat-note">Only admins can see these</span>
+        </div>
+
+        <div class="sba-stat">
+            <span class="sba-stat-label">Last published</span>
+            <span class="sba-stat-value sba-stat-value-small" id="lastPublishedDate">None yet</span>
+            <span class="sba-stat-note" id="lastPublishedTitle">Publish your first guide</span>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="sba-toolbar">
+        <div class="sba-tabs" role="group" aria-label="Filter by status">
+            <button type="button" class="sba-tab is-active" data-post-tab="all" aria-pressed="true">All <span class="sba-tab-count" data-post-count="all">0</span></button>
+            <button type="button" class="sba-tab" data-post-tab="published" aria-pressed="false">Published <span class="sba-tab-count" data-post-count="published">0</span></button>
+            <button type="button" class="sba-tab" data-post-tab="draft" aria-pressed="false">Drafts <span class="sba-tab-count" data-post-count="draft">0</span></button>
+        </div>
+
+        <label class="sba-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <span class="sba-visually-hidden">Search guides</span>
+            <input id="postSearch" type="search" placeholder="Search guide titles" autocomplete="off">
+        </label>
+    </div>
+
+    <!-- POSTS TABLE -->
+    <div class="sba-table-card sba-table-card-full" role="region" aria-label="Guides">
+        <div class="sba-table-scroll">
+            <table class="sba-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Guide</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Last updated</th>
+                        <th scope="col" class="sba-align-right">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody id="blogPostsTable">
+                    <tr>
+                        <td colspan="5" class="sba-empty-cell">Loading guides...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="postsEmpty" class="sba-empty" hidden>
+            <p class="sba-strong" id="postsEmptyTitle">No guides yet</p>
+            <p id="postsEmptyText">Click "New guide" to write your first one.</p>
+        </div>
+    </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>
