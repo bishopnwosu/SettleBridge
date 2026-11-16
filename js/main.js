@@ -3148,4 +3148,285 @@ document.addEventListener("DOMContentLoaded", function () {
       renderProviders();
     });
   }
+
+  // =====================================
+  // 15. PROVIDER PROFILE AND SERVICE REQUESTS
+  // =====================================
+  // Visitors can SEND a request but never read one: the database rules enforce this.
+
+  const providerProfile = document.querySelector("#providerProfile");
+
+  if (providerProfile) {
+    const profileSupabase = window.supabase.createClient(
+      "https://jnvirsxymqdginyatyjq.supabase.co",
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
+    );
+
+    const PROVIDER_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+    const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+    const providerStatus = document.querySelector("#providerStatus");
+    const providerNotFound = document.querySelector("#providerNotFound");
+    const requestForm = document.querySelector("#serviceRequestForm");
+    const requestFormCard = document.querySelector("#requestFormCard");
+    const requestSuccess = document.querySelector("#requestSuccess");
+    const requestError = document.querySelector("#requestError");
+    const requestSubmit = document.querySelector("#requestSubmit");
+    const requestPhone = document.querySelector("#requestPhone");
+    const phoneRequiredMark = document.querySelector("#phoneRequiredMark");
+    const requestMessage = document.querySelector("#requestMessage");
+    const requestMessageCount = document.querySelector("#requestMessageCount");
+    const requestDate = document.querySelector("#requestDate");
+
+    const providerSlug = new URLSearchParams(window.location.search).get("slug") || "";
+    let currentProvider = null;
+
+    function setProfileText(selector, value) {
+      document.querySelector(selector).textContent =
+        value && String(value).trim() ? String(value).trim() : "Not provided";
+    }
+
+    function splitLanguages(text) {
+      return (text || "")
+        .split(/,|;|\/|\band\b|&/i)
+        .map(function (language) {
+          return language.trim();
+        })
+        .filter(Boolean)
+        .map(function (language) {
+          return language.charAt(0).toUpperCase() + language.slice(1);
+        });
+    }
+
+    function formatProfilePrice(provider) {
+      const hasPrice = provider.base_price !== null && provider.base_price !== undefined;
+
+      if (provider.pricing_type === "quote" || !hasPrice) return "Price on request";
+
+      const value = Number(provider.base_price);
+      const euros = new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+      }).format(value);
+
+      return provider.pricing_type === "hourly" ? euros + " per hour" : "From " + euros;
+    }
+
+    function showProviderNotFound() {
+      providerStatus.hidden = true;
+      providerNotFound.hidden = false;
+      document.title = "Provider not found | SettleBridge";
+    }
+
+    // LOAD THE PROVIDER
+    async function loadProviderProfile() {
+      if (!PROVIDER_SLUG_PATTERN.test(providerSlug)) {
+        showProviderNotFound();
+        return;
+      }
+
+      const { data: provider, error } = await profileSupabase
+        .from("providers")
+        .select(
+          "id, business_name, slug, category_id, city, country, description, languages, service_area, pricing_type, base_price",
+        )
+        .eq("slug", providerSlug)
+        .eq("is_listed", true)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Provider error:", error);
+        providerStatus.textContent =
+          "Sorry, we could not load this provider. Please check your connection and try again.";
+        return;
+      }
+
+      if (!provider) {
+        showProviderNotFound();
+        return;
+      }
+
+      currentProvider = provider;
+
+      let categoryName = "Service";
+      if (provider.category_id) {
+        const { data: category } = await profileSupabase
+          .from("service_categories")
+          .select("name")
+          .eq("id", provider.category_id)
+          .maybeSingle();
+
+        if (category && category.name) categoryName = category.name;
+      }
+
+      const languages = splitLanguages(provider.languages);
+      const place = [provider.city, provider.country].filter(Boolean).join(", ");
+
+      // Page title and Google description
+      document.title = provider.business_name + " | " + categoryName + " | SettleBridge";
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute(
+          "content",
+          (provider.description || "").replace(/\s+/g, " ").slice(0, 155),
+        );
+      }
+
+      // Heading
+      document.querySelector("#providerBreadcrumb").textContent = categoryName;
+      document.querySelector("#providerCategory").textContent = categoryName;
+      document.querySelector("#providerName").textContent = provider.business_name;
+      document.querySelector("#providerLocation").textContent = place;
+      document.querySelector("#providerPrice").textContent = formatProfilePrice(provider);
+      document.querySelector("#requestProviderName").textContent = provider.business_name;
+
+      const chips = document.querySelector("#providerLanguageChips");
+      chips.replaceChildren();
+      languages.forEach(function (language) {
+        const chip = document.createElement("li");
+        chip.textContent = language;
+        chips.appendChild(chip);
+      });
+
+      // About and details
+      setProfileText("#providerDescription", provider.description);
+      setProfileText("#detailCategory", categoryName);
+      setProfileText("#detailCity", place);
+      setProfileText("#detailArea", provider.service_area);
+      setProfileText("#detailLanguages", languages.join(", "));
+      setProfileText("#detailPricing", formatProfilePrice(provider));
+
+      providerStatus.hidden = true;
+      providerProfile.hidden = false;
+    }
+
+    // REQUEST FORM
+    function getPreferredContact() {
+      const checked = requestForm.querySelector('input[name="preferredContact"]:checked');
+      return checked ? checked.value : "email";
+    }
+
+    function updatePhoneRequirement() {
+      const needsPhone = getPreferredContact() !== "email";
+      requestPhone.required = needsPhone;
+      phoneRequiredMark.textContent = needsPhone ? "*" : "(optional)";
+    }
+
+    function showRequestError(message, field) {
+      requestError.textContent = message;
+      requestError.hidden = false;
+      if (field) field.focus();
+    }
+
+    // Today's date in the visitor's own time zone, as YYYY-MM-DD
+    function getTodayString() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      return now.toISOString().slice(0, 10);
+    }
+
+    requestDate.min = getTodayString();
+
+    requestForm.querySelectorAll('input[name="preferredContact"]').forEach(function (radio) {
+      radio.addEventListener("change", updatePhoneRequirement);
+    });
+
+    requestMessage.addEventListener("input", function () {
+      requestMessageCount.textContent = requestMessage.value.length + " / 2000";
+    });
+
+    requestForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      requestError.hidden = true;
+
+      if (!currentProvider) return;
+
+      const name = document.querySelector("#requestName").value.trim();
+      const email = document.querySelector("#requestEmail").value.trim();
+      const phone = requestPhone.value.trim();
+      const date = requestDate.value;
+      const message = requestMessage.value.trim();
+      const consent = document.querySelector("#requestConsent").checked;
+      const preferredContact = getPreferredContact();
+
+      // Spam trap: real people never see or fill this field
+      if (document.querySelector("#requestWebsite").value) return;
+
+      if (name.length < 2) {
+        showRequestError("Please enter your name.", document.querySelector("#requestName"));
+        return;
+      }
+
+      if (!EMAIL_PATTERN.test(email)) {
+        showRequestError("Please enter a valid email address.", document.querySelector("#requestEmail"));
+        return;
+      }
+
+      if (preferredContact !== "email" && phone.length < 6) {
+        showRequestError("Please add a phone number so we can call or message you.", requestPhone);
+        return;
+      }
+
+      if (date && date < getTodayString()) {
+        showRequestError("Please choose a date from today onwards.", requestDate);
+        return;
+      }
+
+      if (message.length < 10) {
+        showRequestError("Please tell us a little more about what you need (at least 10 characters).", requestMessage);
+        return;
+      }
+
+      if (!consent) {
+        showRequestError("Please tick the box to agree before sending.", document.querySelector("#requestConsent"));
+        return;
+      }
+
+      requestSubmit.disabled = true;
+      requestSubmit.textContent = "Sending...";
+
+      try {
+        // No .select() here: visitors are not allowed to read requests back
+        const { error } = await profileSupabase.from("service_requests").insert({
+          provider_id: currentProvider.id,
+          provider_name: currentProvider.business_name,
+          requester_name: name,
+          requester_email: email,
+          requester_phone: phone || null,
+          preferred_contact: preferredContact,
+          preferred_date: date || null,
+          message: message,
+          consent: true,
+        });
+
+        if (error) {
+          console.error("Request error:", error);
+
+          const text = String(error.message || "");
+          let friendly = "Sorry, we could not send your request. Please try again.";
+
+          if (text.indexOf("too_many_requests") !== -1) {
+            friendly = "You've sent several requests in the last hour. Please wait a little and try again.";
+          } else if (text.indexOf("provider_not_available") !== -1) {
+            friendly = "This provider is no longer available. Please choose another provider.";
+          } else if (text.indexOf("date_in_past") !== -1) {
+            friendly = "Please choose a date from today onwards.";
+          }
+
+          showRequestError(friendly);
+          return;
+        }
+
+        requestFormCard.hidden = true;
+        requestSuccess.hidden = false;
+        requestSuccess.focus();
+      } finally {
+        requestSubmit.disabled = false;
+        requestSubmit.textContent = "Send request";
+      }
+    });
+
+    loadProviderProfile();
+  }
 });

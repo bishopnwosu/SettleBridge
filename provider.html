@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description" content="A local service provider for newcomers in Portugal, listed on SettleBridge.">
+
+    <title>Provider | SettleBridge</title>
+
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- HEADER -->
+<header>
+    <div class="container navbar">
+
+        <!-- LOGO -->
+        <a href="index.html" class="logo">
+            Settle<span style="color: #16A085;">Bridge</span>
+        </a>
+
+        <!-- MOBILE MENU BUTTON -->
+        <button class="menu-toggle"
+                type="button"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+                aria-controls="main-navigation">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <!-- CENTRE NAVIGATION -->
+        <nav id="main-navigation">
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="services.html" aria-current="page">Find Services</a></li>
+                <li><a href="about.html">About Us</a></li>
+                <li><a href="guides.html">Guides</a></li>
+                <li><a href="become-provider.html">Become a Provider</a></li>
+            </ul>
+        </nav>
+
+        <!-- RIGHT SIDE BUTTONS -->
+        <div class="nav-buttons">
+            <a href="login.html" class="btn btn-outline">Login</a>
+            <a href="register.html" class="btn btn-primary">Get Started</a>
+        </div>
+
+    </div>
+</header>
+
+
+    <main class="container sbp-main">
+
+        <p id="providerStatus" class="sbg-status" role="status">Loading provider...</p>
+
+        <!-- NOT FOUND -->
+        <div id="providerNotFound" class="sbg-not-found" hidden>
+            <h1>Provider not found</h1>
+            <p>This provider may no longer be listed on SettleBridge.</p>
+            <a href="services.html" class="sbg-cta-button sbg-cta-button-dark">See all services</a>
+        </div>
+
+        <!-- PROVIDER PROFILE -->
+        <div id="providerProfile" class="sbp-layout" hidden>
+
+            <article class="sbp-profile">
+
+                <nav aria-label="Breadcrumb" class="sbg-breadcrumb">
+                    <a href="services.html">Find Services</a>
+                    <span aria-hidden="true">/</span>
+                    <span id="providerBreadcrumb"></span>
+                </nav>
+
+                <div class="sbp-head">
+                    <span id="providerCategory" class="sbg-eyebrow"></span>
+                    <h1 id="providerName"></h1>
+                    <p id="providerLocation" class="sbp-location"></p>
+
+                    <div class="sbp-highlights">
+                        <span id="providerPrice" class="sbp-price"></span>
+                        <ul id="providerLanguageChips" class="provider-languages" aria-label="Languages spoken"></ul>
+                    </div>
+                </div>
+
+                <section class="sbp-section" aria-labelledby="aboutHeading">
+                    <h2 id="aboutHeading">About this service</h2>
+                    <p id="providerDescription" class="sbp-description"></p>
+                </section>
+
+                <section class="sbp-section" aria-labelledby="detailsHeading">
+                    <h2 id="detailsHeading">Details</h2>
+                    <dl class="sbp-details">
+                        <dt>Category</dt><dd id="detailCategory"></dd>
+                        <dt>Based in</dt><dd id="detailCity"></dd>
+                        <dt>Service area</dt><dd id="detailArea"></dd>
+                        <dt>Languages</dt><dd id="detailLanguages"></dd>
+                        <dt>Pricing</dt><dd id="detailPricing"></dd>
+                    </dl>
+                </section>
+
+                <p class="sbp-note">
+                    Prices and availability are set by the provider. SettleBridge reviews
+                    providers before listing them, and will confirm the details with you
+                    before anything is booked.
+                </p>
+            </article>
+
+            <!-- REQUEST FORM -->
+            <aside class="sbp-request" aria-labelledby="requestHeading">
+
+                <div id="requestFormCard" class="sbp-card">
+                    <h2 id="requestHeading">Request this service</h2>
+                    <p class="sbp-card-intro">Tell us what you need. We'll check availability with <span id="requestProviderName"></span> and get back to you.</p>
+
+                    <form id="serviceRequestForm" novalidate>
+
+                        <div class="sbp-field">
+                            <label for="requestName">Your name *</label>
+                            <input type="text" id="requestName" name="name" maxlength="100" autocomplete="name" required>
+                        </div>
+
+                        <div class="sbp-field">
+                            <label for="requestEmail">Email *</label>
+                            <input type="email" id="requestEmail" name="email" maxlength="254" autocomplete="email" required>
+                        </div>
+
+                        <fieldset class="sbp-field sbp-radios">
+                            <legend>How should we contact you?</legend>
+                            <label><input type="radio" name="preferredContact" value="email" checked> Email</label>
+                            <label><input type="radio" name="preferredContact" value="phone"> Phone call</label>
+                            <label><input type="radio" name="preferredContact" value="whatsapp"> WhatsApp</label>
+                        </fieldset>
+
+                        <div class="sbp-field">
+                            <label for="requestPhone">Phone or WhatsApp number <span id="phoneRequiredMark">(optional)</span></label>
+                            <input type="tel" id="requestPhone" name="phone" maxlength="40" autocomplete="tel" placeholder="+351 ...">
+                        </div>
+
+                        <div class="sbp-field">
+                            <label for="requestDate">Preferred date (optional)</label>
+                            <input type="date" id="requestDate" name="date">
+                        </div>
+
+                        <div class="sbp-field">
+                            <label for="requestMessage">What do you need? *</label>
+                            <textarea id="requestMessage" name="message" rows="5" maxlength="2000" required placeholder="For example: pickup from Lisbon airport on Friday at 18:00, 2 adults and 1 child, 3 suitcases."></textarea>
+                            <span id="requestMessageCount" class="sbp-hint">0 / 2000</span>
+                        </div>
+
+                        <!-- Spam trap: hidden from people, often filled in by bots -->
+                        <div class="sbp-trap" aria-hidden="true">
+                            <label for="requestWebsite">Leave this empty</label>
+                            <input type="text" id="requestWebsite" name="website" tabindex="-1" autocomplete="off">
+                        </div>
+
+                        <label class="sbp-consent">
+                            <input type="checkbox" id="requestConsent" name="consent" required>
+                            <span>I agree that SettleBridge stores my details and shares them with this provider to arrange the service, as described in the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. *</span>
+                        </label>
+
+                        <p id="requestError" class="sbp-error" role="alert" hidden></p>
+
+                        <button type="submit" id="requestSubmit" class="btn btn-primary sbp-submit">Send request</button>
+
+                        <p class="sbp-hint">Your contact details are never shown publicly.</p>
+                    </form>
+                </div>
+
+                <div id="requestSuccess" class="sbp-card sbp-success" role="status" tabindex="-1" hidden>
+                    <h2>Request sent</h2>
+                    <p>Thank you. We've received your request and will contact you as soon as we've checked with the provider.</p>
+                    <a href="services.html" class="btn btn-primary">Browse more services</a>
+                </div>
+            </aside>
+        </div>
+
+    </main>
+
+
+        <!-- FOOTER -->
+    <footer>
+
+        <div class="container">
+
+            <div class="footer-content">
+
+                <div class="footer-brand">
+
+                    <a href="index.html" class="logo" style="color: white;">
+                        Settle<span>Bridge</span>
+                    </a>
+
+                    <p>
+                        Arrive with a plan. Settle with confidence.
+                        Connecting newcomers with practical local services.
+                    </p>
+
+                </div>
+
+
+                <div class="footer-column">
+
+                    <h3>Explore</h3>
+
+                    <a href="index.html">Home</a>
+                    <a href="services.html">Find Services</a>
+                    <a href="guides.html">Guides</a>
+                    <a href="index.html#how-it-works">How It Works</a>
+                    <a href="become-provider.html">Become a Provider</a>
+
+                </div>
+
+
+                <div class="footer-column">
+
+                    <h3>Support</h3>
+
+                    <a href="help.html">Help Centre</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms and Conditions</a>
+                    <a href="contact.html">Contact Us</a>
+
+                </div>
+
+            </div>
+
+
+            <div class="footer-bottom">
+
+                <p>© 2026 SettleBridge. All rights reserved.</p>
+
+            </div>
+
+        </div>
+
+    </footer>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

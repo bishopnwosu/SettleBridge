@@ -4,18 +4,23 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// TODO before launch: replace "*" with your real website address.
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// Only these websites may call this function from a browser.
+const ALLOWED_ORIGINS = [
+  "https://settlebridgee.netlify.app", // live site on Netlify
+  "http://127.0.0.1:5500", // VS Code Live Server
+  "http://localhost:5500", // VS Code Live Server (other spelling)
+];
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+function corsHeadersFor(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
 }
 
 // Stops provider-typed text (e.g. business name) from breaking the email HTML.
@@ -84,6 +89,15 @@ function buildEmail(status: "approved" | "rejected", contactName: string, busine
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
+
+  function jsonResponse(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
 
