@@ -264,7 +264,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
           consent:
             formData.get("informationConfirmation") === "on" &&
-            formData.get("termsAgreement") === "on",
+            formData.get("termsAgreement") === "on" &&
+            formData.get("publicProfileConsent") === "on",
         };
 
         // SAVE APPLICATION TO SUPABASE
