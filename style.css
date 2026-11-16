@@ -4717,3 +4717,85 @@ fieldset.filter-group:last-child {
         padding: 20px;
     }
 }
+
+
+/* =====================================
+   ADMIN SERVICE REQUESTS
+===================================== */
+
+.sba-badge-request-new {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.sba-badge-request-contacted {
+    background: #E6EEF5;
+    color: #0A3D62;
+}
+
+.sba-badge-request-forwarded {
+    background: #DCFCE7;
+    color: #166534;
+}
+
+.sba-badge-request-closed {
+    background: #EEF2F6;
+    color: #334155;
+}
+
+
+.sba-action-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sba-action-links .sba-small-btn {
+    min-height: 40px;
+}
+
+.sba-status-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.sba-status-buttons button {
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.sba-status-buttons button:hover {
+    background: #F1F5F9;
+}
+
+.sba-status-buttons button.is-active {
+    border-color: #0A3D62;
+    background: #0A3D62;
+    color: #FFFFFF;
+}
+
+.sba-status-buttons button:disabled {
+    opacity: 0.6;
+}
+
+.sba-group-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.sba-notes-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}

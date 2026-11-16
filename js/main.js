@@ -3429,4 +3429,589 @@ document.addEventListener("DOMContentLoaded", function () {
 
     loadProviderProfile();
   }
+
+  // =====================================
+  // 16. ADMIN SERVICE REQUESTS
+  // =====================================
+  // Only admins can read requests: the database security rules enforce this.
+
+  const requestsTable = document.querySelector("#requestsTable");
+
+  if (requestsTable) {
+    const requestsSupabase = window.supabase.createClient(
+      "https://jnvirsxymqdginyatyjq.supabase.co",
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
+    );
+
+    const REQUEST_STATUS_LABELS = {
+      new: "New",
+      contacted: "Contacted",
+      forwarded: "Forwarded",
+      closed: "Closed",
+    };
+
+    const CONTACT_LABELS = {
+      email: "Email",
+      phone: "Phone call",
+      whatsapp: "WhatsApp",
+    };
+
+    function byRequestId(id) {
+      return document.getElementById(id);
+    }
+
+    const requestsMessage = byRequestId("adminMessage");
+    const requestsLogout = byRequestId("adminLogout");
+    const requestSearch = byRequestId("requestSearch");
+    const requestTabs = document.querySelectorAll("[data-request-tab]");
+    const requestsEmpty = byRequestId("requestsEmpty");
+    const requestToast = byRequestId("requestToast");
+    const requestToastText = byRequestId("requestToastText");
+    const requestDetailEmpty = byRequestId("requestDetailEmpty");
+    const requestDetail = byRequestId("requestDetail");
+    const requestNotes = byRequestId("requestNotes");
+    const requestNotesStatus = byRequestId("requestNotesStatus");
+    const saveNotesButton = byRequestId("saveNotesButton");
+    const statusButtons = document.querySelectorAll("[data-set-status]");
+    const requestDeleteStart = byRequestId("requestDeleteStart");
+    const requestDeleteConfirm = byRequestId("requestDeleteConfirm");
+
+    let allRequests = [];
+    let providersById = {};
+    let currentRequestTab = "new";
+    let selectedRequestId = null;
+    let requestBusy = false;
+
+    // SMALL HELPERS
+    function formatRequestDate(value, withTime) {
+      if (!value) return "Not given";
+
+      const options = { day: "numeric", month: "short", year: "numeric" };
+      if (withTime) {
+        options.hour = "2-digit";
+        options.minute = "2-digit";
+      }
+
+      // Dates without a time (YYYY-MM-DD) are read as local dates
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(value + "T00:00:00") : new Date(value);
+      return date.toLocaleString("en-GB", options);
+    }
+
+    function setRequestText(id, value) {
+      byRequestId(id).textContent = value && String(value).trim() ? String(value).trim() : "Not provided";
+    }
+
+    // Put a link (email, phone) inside a details cell
+    function setRequestLink(id, href, text) {
+      const cell = byRequestId(id);
+      cell.replaceChildren();
+
+      if (!text) {
+        cell.textContent = "Not provided";
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = href;
+      link.textContent = text;
+      link.className = "sba-text-link";
+      cell.appendChild(link);
+    }
+
+    function phoneForLinks(phone) {
+      return (phone || "").replace(/[^\d+]/g, "");
+    }
+
+    function createRequestBadge(status) {
+      const badge = document.createElement("span");
+      badge.className = "sba-badge sba-badge-request-" + (REQUEST_STATUS_LABELS[status] ? status : "new");
+      badge.textContent = REQUEST_STATUS_LABELS[status] || status;
+      return badge;
+    }
+
+    function showRequestToast(text, kind) {
+      requestToastText.textContent = text;
+      requestToast.className = "sba-toast sba-toast-" + kind;
+      requestToast.hidden = false;
+    }
+
+    function getSelectedRequest() {
+      return allRequests.find(function (request) {
+        return request.id === selectedRequestId;
+      });
+    }
+
+    // CHECK ADMIN LOGIN AND PERMISSIONS
+    async function checkRequestsAdminAccess() {
+      const { data: sessionData, error: sessionError } =
+        await requestsSupabase.auth.getSession();
+
+      if (sessionError || !sessionData.session) {
+        window.location.href = "login.html";
+        return false;
+      }
+
+      const { data: isAdmin, error: adminError } = await requestsSupabase.rpc(
+        "is_settlebridge_admin",
+      );
+
+      if (adminError || !isAdmin) {
+        alert("You do not have permission to access this page.");
+        await requestsSupabase.auth.signOut();
+        window.location.href = "login.html";
+        return false;
+      }
+
+      return true;
+    }
+
+    // LOAD REQUESTS (and provider web addresses for the profile links)
+    async function loadRequests() {
+      const [requestResult, providerResult] = await Promise.all([
+        requestsSupabase
+          .from("service_requests")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(500),
+        requestsSupabase.from("providers").select("id, slug, application_id, is_listed"),
+      ]);
+
+      if (requestResult.error) {
+        console.error("Requests error:", requestResult.error);
+        requestsMessage.textContent = "Unable to load requests. Please refresh the page.";
+        requestsMessage.hidden = false;
+        requestsTable.replaceChildren();
+        return;
+      }
+
+      requestsMessage.hidden = true;
+      allRequests = requestResult.data || [];
+
+      providersById = {};
+      (providerResult.data || []).forEach(function (provider) {
+        providersById[provider.id] = provider;
+      });
+
+      updateRequestSummary();
+      renderRequestsTable();
+      renderRequestDetail();
+    }
+
+    // SUMMARY CARDS AND TAB COUNTS
+    function updateRequestSummary() {
+      const counts = { all: allRequests.length, new: 0, contacted: 0, forwarded: 0, closed: 0 };
+
+      allRequests.forEach(function (request) {
+        if (counts[request.status] !== undefined) counts[request.status] += 1;
+      });
+
+      byRequestId("totalRequests").textContent = counts.all;
+      byRequestId("newRequestsCount").textContent = counts.new;
+      byRequestId("contactedRequestsCount").textContent = counts.contacted;
+      byRequestId("forwardedRequestsCount").textContent = counts.forwarded;
+      byRequestId("closedRequestsCount").textContent = counts.closed;
+
+      const oldestNew = allRequests
+        .filter(function (request) {
+          return request.status === "new";
+        })
+        .sort(function (a, b) {
+          return new Date(a.created_at) - new Date(b.created_at);
+        })[0];
+
+      byRequestId("oldestNewRequest").textContent = oldestNew
+        ? formatRequestDate(oldestNew.created_at)
+        : "none";
+
+      document.querySelectorAll("[data-request-count]").forEach(function (element) {
+        element.textContent = counts[element.dataset.requestCount];
+      });
+    }
+
+    // DISPLAY THE TABLE
+    function renderRequestsTable() {
+      const search = requestSearch.value.trim().toLowerCase();
+
+      const requests = allRequests
+        .filter(function (request) {
+          if (currentRequestTab !== "all" && request.status !== currentRequestTab) return false;
+
+          if (search) {
+            const text = [request.requester_name, request.requester_email, request.provider_name]
+              .join(" ")
+              .toLowerCase();
+            if (text.indexOf(search) === -1) return false;
+          }
+
+          return true;
+        })
+        .sort(function (a, b) {
+          // New requests: oldest first, so nobody waits too long. Others: newest first.
+          const difference = new Date(a.created_at) - new Date(b.created_at);
+          return currentRequestTab === "new" ? difference : -difference;
+        });
+
+      requestsTable.replaceChildren();
+      requestsEmpty.hidden = requests.length > 0;
+
+      byRequestId("requestsEmptyTitle").textContent =
+        allRequests.length === 0 ? "No requests yet" : "No requests here";
+      byRequestId("requestsEmptyText").textContent =
+        allRequests.length === 0
+          ? "Requests from provider profile pages will appear here."
+          : "Try another status or search.";
+
+      requests.forEach(function (request) {
+        const row = document.createElement("tr");
+        row.className = "sba-row" + (request.id === selectedRequestId ? " is-selected" : "");
+        row.addEventListener("click", function () {
+          selectRequest(request.id);
+        });
+
+        const personCell = document.createElement("td");
+        const openButton = document.createElement("button");
+        openButton.type = "button";
+        openButton.className = "sba-link";
+        openButton.textContent = request.requester_name;
+        const emailLine = document.createElement("div");
+        emailLine.className = "sba-sub";
+        emailLine.textContent = request.requester_email;
+        personCell.appendChild(openButton);
+        personCell.appendChild(emailLine);
+
+        const providerCell = document.createElement("td");
+        providerCell.textContent = request.provider_name;
+
+        const dateCell = document.createElement("td");
+        dateCell.className = "sba-nowrap";
+        dateCell.textContent = request.preferred_date
+          ? formatRequestDate(request.preferred_date)
+          : "Flexible";
+
+        const receivedCell = document.createElement("td");
+        receivedCell.className = "sba-nowrap";
+        receivedCell.textContent = formatRequestDate(request.created_at);
+
+        const statusCell = document.createElement("td");
+        statusCell.appendChild(createRequestBadge(request.status));
+
+        row.appendChild(personCell);
+        row.appendChild(providerCell);
+        row.appendChild(dateCell);
+        row.appendChild(receivedCell);
+        row.appendChild(statusCell);
+        requestsTable.appendChild(row);
+      });
+    }
+
+    function selectRequest(requestId) {
+      selectedRequestId = requestId;
+      requestToast.hidden = true;
+      requestDeleteConfirm.hidden = true;
+      requestDeleteStart.hidden = false;
+
+      renderRequestsTable();
+      renderRequestDetail();
+
+      if (window.innerWidth < 900) {
+        requestDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    // DISPLAY THE DETAILS PANEL
+    function renderRequestDetail() {
+      const request = getSelectedRequest();
+
+      if (!request) {
+        requestDetailEmpty.hidden = false;
+        requestDetail.hidden = true;
+        return;
+      }
+
+      requestDetailEmpty.hidden = true;
+      requestDetail.hidden = false;
+
+      const badge = createRequestBadge(request.status);
+      const statusBadge = byRequestId("requestStatusBadge");
+      statusBadge.className = badge.className;
+      statusBadge.textContent = badge.textContent;
+
+      byRequestId("requestReceived").textContent =
+        "Received " + formatRequestDate(request.created_at, true);
+      setRequestText("requestName", request.requester_name);
+      setRequestText("requestProviderLabel", request.provider_name);
+
+      // Newcomer
+      setRequestLink("requestEmail", "mailto:" + request.requester_email, request.requester_email);
+      setRequestLink(
+        "requestPhone",
+        "tel:" + phoneForLinks(request.requester_phone),
+        request.requester_phone,
+      );
+      setRequestText("requestPreferred", CONTACT_LABELS[request.preferred_contact]);
+      setRequestText(
+        "requestDateWanted",
+        request.preferred_date ? formatRequestDate(request.preferred_date) : "Flexible",
+      );
+      setRequestText("requestMessageText", request.message);
+
+      // Provider name (with a link to its public profile when it is still listed)
+      const provider = providersById[request.provider_id];
+      if (provider && provider.is_listed) {
+        setRequestLink(
+          "requestProviderName",
+          "provider.html?slug=" + encodeURIComponent(provider.slug),
+          request.provider_name,
+        );
+        byRequestId("requestProviderName").querySelector("a").target = "_blank";
+      } else {
+        setRequestText(
+          "requestProviderName",
+          request.provider_name + (provider ? " (hidden)" : " (removed)"),
+        );
+      }
+
+      // Provider contact details are loaded separately (they are private)
+      setRequestText("requestProviderContact", "Loading...");
+      setRequestText("requestProviderEmail", "Loading...");
+      setRequestText("requestProviderPhone", "Loading...");
+      byRequestId("emailProviderLink").hidden = true;
+      loadProviderContact(request, provider);
+
+      // Quick actions
+      const subject = "Your SettleBridge request: " + request.provider_name;
+      const greeting =
+        "Hello " + request.requester_name + ",\n\n" +
+        "Thank you for your request for " + request.provider_name + " on SettleBridge.\n\n";
+
+      byRequestId("emailRequesterLink").href =
+        "mailto:" + encodeURIComponent(request.requester_email) +
+        "?subject=" + encodeURIComponent(subject) +
+        "&body=" + encodeURIComponent(greeting);
+
+      const whatsappLink = byRequestId("whatsappRequesterLink");
+      const whatsappNumber = phoneForLinks(request.requester_phone).replace(/^\+/, "");
+      whatsappLink.hidden = whatsappNumber.length < 6;
+      if (!whatsappLink.hidden) {
+        whatsappLink.href =
+          "https://wa.me/" + whatsappNumber + "?text=" +
+          encodeURIComponent(greeting.replace(/\n\n/g, " ").trim());
+      }
+
+      // Status buttons
+      statusButtons.forEach(function (button) {
+        const isCurrent = button.dataset.setStatus === request.status;
+        button.classList.toggle("is-active", isCurrent);
+        button.setAttribute("aria-pressed", String(isCurrent));
+        button.disabled = requestBusy;
+      });
+
+      // Notes
+      requestNotes.value = request.admin_notes || "";
+      requestNotesStatus.textContent = "";
+    }
+
+    async function loadProviderContact(request, provider) {
+      if (!provider || !provider.application_id) {
+        setRequestText("requestProviderContact", "");
+        setRequestText("requestProviderEmail", "");
+        setRequestText("requestProviderPhone", "");
+        return;
+      }
+
+      const { data: application, error } = await requestsSupabase
+        .from("provider_applications")
+        .select("contact_name, email, phone, whatsapp")
+        .eq("id", provider.application_id)
+        .maybeSingle();
+
+      // Stop if the admin has already clicked another request
+      if (selectedRequestId !== request.id) return;
+
+      if (error || !application) {
+        setRequestText("requestProviderContact", "Could not load");
+        setRequestText("requestProviderEmail", "");
+        setRequestText("requestProviderPhone", "");
+        return;
+      }
+
+      setRequestText("requestProviderContact", application.contact_name);
+      setRequestLink("requestProviderEmail", "mailto:" + application.email, application.email);
+
+      const providerPhone = application.whatsapp || application.phone;
+      setRequestLink("requestProviderPhone", "tel:" + phoneForLinks(providerPhone), providerPhone);
+
+      if (application.email) {
+        const lines = [
+          "Hello " + (application.contact_name || "") + ",",
+          "",
+          "A newcomer has asked for your service through SettleBridge:",
+          "",
+          "Name: " + request.requester_name,
+          "Email: " + request.requester_email,
+          "Phone: " + (request.requester_phone || "Not provided"),
+          "Prefers: " + (CONTACT_LABELS[request.preferred_contact] || "Email"),
+          "Date wanted: " +
+            (request.preferred_date ? formatRequestDate(request.preferred_date) : "Flexible"),
+          "",
+          "Message:",
+          request.message,
+          "",
+          "Please reply to let us know whether you can help.",
+          "",
+          "The SettleBridge Team",
+        ];
+
+        const providerLink = byRequestId("emailProviderLink");
+        providerLink.href =
+          "mailto:" + encodeURIComponent(application.email) +
+          "?subject=" + encodeURIComponent("New SettleBridge request from " + request.requester_name) +
+          "&body=" + encodeURIComponent(lines.join("\n"));
+        providerLink.hidden = false;
+      }
+    }
+
+    // SAVE CHANGES TO ONE REQUEST
+    async function updateRequest(changes, successText) {
+      const request = getSelectedRequest();
+      if (!request || requestBusy) return false;
+
+      requestBusy = true;
+      renderRequestDetail();
+
+      try {
+        const { data, error } = await requestsSupabase
+          .from("service_requests")
+          .update(changes)
+          .eq("id", request.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Request update error:", error);
+          showRequestToast("Could not save this change. Please try again.", "error");
+          return false;
+        }
+
+        Object.assign(request, data);
+        showRequestToast(successText, "success");
+        return true;
+      } finally {
+        requestBusy = false;
+        updateRequestSummary();
+        renderRequestsTable();
+        renderRequestDetail();
+      }
+    }
+
+    statusButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        const newStatus = button.dataset.setStatus;
+        const request = getSelectedRequest();
+        if (!request || request.status === newStatus) return;
+
+        updateRequest(
+          { status: newStatus },
+          "Marked as " + REQUEST_STATUS_LABELS[newStatus].toLowerCase() + ".",
+        );
+      });
+    });
+
+    saveNotesButton.addEventListener("click", async function () {
+      const notes = requestNotes.value.trim();
+      const saved = await updateRequest({ admin_notes: notes || null }, "Notes saved.");
+      if (saved) requestNotesStatus.textContent = "Saved";
+    });
+
+    requestNotes.addEventListener("input", function () {
+      requestNotesStatus.textContent = "Unsaved changes";
+    });
+
+    // DELETE (for data protection: when no longer needed, or if the person asks)
+    byRequestId("requestDeleteButton").addEventListener("click", function () {
+      requestDeleteStart.hidden = true;
+      requestDeleteConfirm.hidden = false;
+      byRequestId("requestDeleteCancel").focus();
+    });
+
+    byRequestId("requestDeleteCancel").addEventListener("click", function () {
+      requestDeleteConfirm.hidden = true;
+      requestDeleteStart.hidden = false;
+    });
+
+    byRequestId("requestDeleteConfirmButton").addEventListener("click", async function () {
+      const request = getSelectedRequest();
+      if (!request || requestBusy) return;
+
+      requestBusy = true;
+      this.disabled = true;
+
+      try {
+        const { data, error } = await requestsSupabase
+          .from("service_requests")
+          .delete()
+          .eq("id", request.id)
+          .select("id");
+
+        if (error || !data || data.length === 0) {
+          console.error("Request delete error:", error);
+          showRequestToast("Could not delete this request. Please try again.", "error");
+          return;
+        }
+
+        allRequests = allRequests.filter(function (item) {
+          return item.id !== request.id;
+        });
+        selectedRequestId = null;
+        requestDeleteConfirm.hidden = true;
+        requestDeleteStart.hidden = false;
+        showRequestToast("Request deleted.", "success");
+      } finally {
+        requestBusy = false;
+        this.disabled = false;
+        updateRequestSummary();
+        renderRequestsTable();
+        renderRequestDetail();
+      }
+    });
+
+    // FILTERS
+    requestTabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        currentRequestTab = tab.dataset.requestTab;
+
+        requestTabs.forEach(function (otherTab) {
+          const isActive = otherTab === tab;
+          otherTab.classList.toggle("is-active", isActive);
+          otherTab.setAttribute("aria-pressed", String(isActive));
+        });
+
+        renderRequestsTable();
+      });
+    });
+
+    requestSearch.addEventListener("input", renderRequestsTable);
+    byRequestId("requestToastClose").addEventListener("click", function () {
+      requestToast.hidden = true;
+    });
+
+    // LOGOUT
+    if (requestsLogout) {
+      requestsLogout.addEventListener("click", async function () {
+        const { error } = await requestsSupabase.auth.signOut();
+
+        if (error) {
+          alert("Unable to log out. Please try again.");
+          return;
+        }
+
+        window.location.href = "login.html";
+      });
+    }
+
+    // START
+    checkRequestsAdminAccess().then(function (isAdmin) {
+      if (isAdmin) loadRequests();
+    });
+  }
 });

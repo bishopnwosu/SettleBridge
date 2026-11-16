@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+
+    <title>Service requests | SettleBridge Admin</title>
+
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="sba-body">
+
+<!-- ADMIN HEADER -->
+<header>
+    <div class="sba-header-inner">
+        <div class="sba-brand">
+            <a href="index.html" class="sba-logo">Settle<span>Bridge</span></a>
+            <span class="sba-pill">Admin</span>
+
+            <nav class="sba-admin-nav" aria-label="Admin sections">
+                <a href="admin.html">Applications</a>
+                <a href="admin-requests.html" aria-current="page">Requests</a>
+                <a href="admin-blog.html">Guides</a>
+            </nav>
+        </div>
+
+        <div class="sba-header-actions">
+            <button id="adminLogout" class="sba-btn sba-btn-outline" type="button">Log out</button>
+        </div>
+    </div>
+</header>
+
+<main class="sba-main">
+
+    <!-- PAGE TITLE -->
+    <div class="sba-title-row">
+        <div>
+            <h1>Service requests</h1>
+            <p>Requests sent by newcomers from provider profiles. Contact them and pass the request to the provider.</p>
+        </div>
+        <span class="sba-muted"><span id="totalRequests">0</span> requests in total</span>
+    </div>
+
+    <!-- ERROR MESSAGES -->
+    <p id="adminMessage" class="sba-alert" role="alert" hidden></p>
+
+    <!-- SUMMARY CARDS -->
+    <div class="sba-stats" role="group" aria-label="Summary">
+        <div class="sba-stat sba-stat-primary">
+            <span class="sba-stat-label">New</span>
+            <span class="sba-stat-value" id="newRequestsCount">0</span>
+            <span class="sba-stat-note">Oldest: <span id="oldestNewRequest">none</span></span>
+        </div>
+        <div class="sba-stat">
+            <span class="sba-stat-label">Contacted</span>
+            <span class="sba-stat-value" id="contactedRequestsCount">0</span>
+            <span class="sba-stat-note">You have replied to the newcomer</span>
+        </div>
+        <div class="sba-stat">
+            <span class="sba-stat-label">Forwarded</span>
+            <span class="sba-stat-value sba-value-approved" id="forwardedRequestsCount">0</span>
+            <span class="sba-stat-note">Passed to the provider</span>
+        </div>
+        <div class="sba-stat">
+            <span class="sba-stat-label">Closed</span>
+            <span class="sba-stat-value" id="closedRequestsCount">0</span>
+            <span class="sba-stat-note">Finished or cancelled</span>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="sba-toolbar">
+        <div class="sba-tabs" role="group" aria-label="Filter by status">
+            <button type="button" class="sba-tab is-active" data-request-tab="new" aria-pressed="true">New <span class="sba-tab-count" data-request-count="new">0</span></button>
+            <button type="button" class="sba-tab" data-request-tab="contacted" aria-pressed="false">Contacted <span class="sba-tab-count" data-request-count="contacted">0</span></button>
+            <button type="button" class="sba-tab" data-request-tab="forwarded" aria-pressed="false">Forwarded <span class="sba-tab-count" data-request-count="forwarded">0</span></button>
+            <button type="button" class="sba-tab" data-request-tab="closed" aria-pressed="false">Closed <span class="sba-tab-count" data-request-count="closed">0</span></button>
+            <button type="button" class="sba-tab" data-request-tab="all" aria-pressed="false">All <span class="sba-tab-count" data-request-count="all">0</span></button>
+        </div>
+
+        <label class="sba-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <span class="sba-visually-hidden">Search requests</span>
+            <input id="requestSearch" type="search" placeholder="Search name, email or provider" autocomplete="off">
+        </label>
+    </div>
+
+    <div class="sba-layout">
+
+        <!-- REQUESTS TABLE -->
+        <div class="sba-table-card" role="region" aria-label="Requests">
+            <div class="sba-table-scroll">
+                <table class="sba-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Newcomer</th>
+                            <th scope="col">Provider</th>
+                            <th scope="col">Preferred date</th>
+                            <th scope="col">Received</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsTable">
+                        <tr>
+                            <td colspan="5" class="sba-empty-cell">Loading requests...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="requestsEmpty" class="sba-empty" hidden>
+                <p class="sba-strong" id="requestsEmptyTitle">No requests here</p>
+                <p id="requestsEmptyText">Try another status or search.</p>
+            </div>
+        </div>
+
+        <!-- DETAILS PANEL -->
+        <aside class="sba-side" aria-label="Request details">
+
+            <div id="requestToast" class="sba-toast" role="status" hidden>
+                <span id="requestToastText"></span>
+                <button type="button" id="requestToastClose" aria-label="Dismiss message">&times;</button>
+            </div>
+
+            <div id="requestDetailEmpty" class="sba-detail-empty">
+                <p class="sba-strong">Select a request</p>
+                <p>Its details, contact options and status appear here.</p>
+            </div>
+
+            <div id="requestDetail" class="sba-detail" hidden>
+
+                <div class="sba-detail-head">
+                    <div class="sba-detail-top">
+                        <span id="requestStatusBadge" class="sba-badge"></span>
+                        <span id="requestReceived" class="sba-muted"></span>
+                    </div>
+                    <h2 id="requestName"></h2>
+                    <p class="sba-muted">Request for <strong id="requestProviderLabel"></strong></p>
+                </div>
+
+                <div class="sba-detail-body">
+
+                    <div class="sba-group">
+                        <h3>Newcomer</h3>
+                        <dl class="sba-dl">
+                            <dt>Email</dt><dd id="requestEmail"></dd>
+                            <dt>Phone</dt><dd id="requestPhone"></dd>
+                            <dt>Prefers</dt><dd id="requestPreferred"></dd>
+                            <dt>Date wanted</dt><dd id="requestDateWanted"></dd>
+                        </dl>
+                    </div>
+
+                    <div class="sba-group">
+                        <h3>Message</h3>
+                        <p id="requestMessageText" class="sba-description"></p>
+                    </div>
+
+                    <div class="sba-group">
+                        <h3>Provider</h3>
+                        <dl class="sba-dl">
+                            <dt>Business</dt><dd id="requestProviderName"></dd>
+                            <dt>Contact</dt><dd id="requestProviderContact"></dd>
+                            <dt>Email</dt><dd id="requestProviderEmail"></dd>
+                            <dt>Phone</dt><dd id="requestProviderPhone"></dd>
+                        </dl>
+                    </div>
+
+                    <div class="sba-group">
+                        <h3>Quick actions</h3>
+                        <div class="sba-action-links">
+                            <a id="emailRequesterLink" class="sba-small-btn" href="#">Email newcomer</a>
+                            <a id="whatsappRequesterLink" class="sba-small-btn" href="#" target="_blank" rel="noopener" hidden>WhatsApp newcomer</a>
+                            <a id="emailProviderLink" class="sba-small-btn" href="#" hidden>Email provider</a>
+                        </div>
+                        <span class="sba-hint">These open your own email app or WhatsApp with a ready-made message for you to check before sending.</span>
+                    </div>
+
+                    <div class="sba-group">
+                        <h3>Status</h3>
+                        <div class="sba-status-buttons" role="group" aria-label="Change status">
+                            <button type="button" data-set-status="new">New</button>
+                            <button type="button" data-set-status="contacted">Contacted</button>
+                            <button type="button" data-set-status="forwarded">Forwarded</button>
+                            <button type="button" data-set-status="closed">Closed</button>
+                        </div>
+                    </div>
+
+                    <div class="sba-group">
+                        <label for="requestNotes" class="sba-group-label">Private notes</label>
+                        <textarea id="requestNotes" class="sba-input" rows="3" maxlength="2000" placeholder="Only admins can see these notes."></textarea>
+                        <div class="sba-notes-row">
+                            <span id="requestNotesStatus" class="sba-hint"></span>
+                            <button type="button" id="saveNotesButton" class="sba-btn sba-btn-outline">Save notes</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sba-detail-foot">
+                    <div id="requestDeleteStart" class="sba-danger-row">
+                        <span class="sba-muted">Delete when no longer needed, or if the person asks.</span>
+                        <button type="button" id="requestDeleteButton" class="sba-btn sba-btn-reject">Delete</button>
+                    </div>
+                    <div id="requestDeleteConfirm" class="sba-confirm" role="alertdialog" aria-labelledby="requestDeleteTitle" hidden>
+                        <p id="requestDeleteTitle" class="sba-confirm-title">Delete this request for good?</p>
+                        <p>The newcomer's details and message will be permanently removed.</p>
+                        <div class="sba-btn-row">
+                            <button type="button" id="requestDeleteCancel" class="sba-btn sba-btn-cancel">Cancel</button>
+                            <button type="button" id="requestDeleteConfirmButton" class="sba-btn sba-btn-reject-solid">Yes, delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>
