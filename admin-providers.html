@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+
+    <title>Providers | SettleBridge Admin</title>
+
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="sba-body">
+
+<!-- ADMIN HEADER -->
+<header>
+    <div class="sba-header-inner">
+        <div class="sba-brand">
+            <a href="index.html" class="sba-logo">Settle<span>Bridge</span></a>
+            <span class="sba-pill">Admin</span>
+
+            <nav class="sba-admin-nav" aria-label="Admin sections">
+                <a href="admin.html">Applications</a>
+                <a href="admin-providers.html" aria-current="page">Providers</a>
+                <a href="admin-requests.html">Requests</a>
+                <a href="admin-blog.html">Guides</a>
+            </nav>
+        </div>
+
+        <div class="sba-header-actions">
+            <button id="adminLogout" class="sba-btn sba-btn-outline" type="button">Log out</button>
+        </div>
+    </div>
+</header>
+
+<main class="sba-main">
+
+    <!-- PAGE TITLE -->
+    <div class="sba-title-row">
+        <div>
+            <h1>Providers</h1>
+            <p>Edit public profiles, hide providers from the website, send them back for review or delete them.</p>
+        </div>
+        <span class="sba-muted"><span id="totalProviders">0</span> providers in total</span>
+    </div>
+
+    <!-- ERROR MESSAGES -->
+    <p id="adminMessage" class="sba-alert" role="alert" hidden></p>
+
+    <!-- SUMMARY CARDS -->
+    <div class="sba-stats" role="group" aria-label="Summary">
+        <div class="sba-stat sba-stat-primary">
+            <span class="sba-stat-label">Listed</span>
+            <span class="sba-stat-value" id="listedProvidersCount">0</span>
+            <span class="sba-stat-note">Visible on the Services page</span>
+        </div>
+        <div class="sba-stat">
+            <span class="sba-stat-label">Hidden</span>
+            <span class="sba-stat-value" id="hiddenProvidersCount">0</span>
+            <span class="sba-stat-note">Not shown to visitors</span>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="sba-toolbar">
+        <div class="sba-tabs" role="group" aria-label="Filter providers">
+            <button type="button" class="sba-tab is-active" data-provider-tab="all" aria-pressed="true">All <span class="sba-tab-count" data-provider-count="all">0</span></button>
+            <button type="button" class="sba-tab" data-provider-tab="listed" aria-pressed="false">Listed <span class="sba-tab-count" data-provider-count="listed">0</span></button>
+            <button type="button" class="sba-tab" data-provider-tab="hidden" aria-pressed="false">Hidden <span class="sba-tab-count" data-provider-count="hidden">0</span></button>
+        </div>
+
+        <label class="sba-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <span class="sba-visually-hidden">Search providers</span>
+            <input id="providerAdminSearch" type="search" placeholder="Search business or city" autocomplete="off">
+        </label>
+    </div>
+
+    <div class="sba-layout">
+
+        <!-- PROVIDERS TABLE -->
+        <div class="sba-table-card" role="region" aria-label="Providers">
+            <div class="sba-table-scroll">
+                <table class="sba-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Business</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Price</th>
+                            <th scope="col">Updated</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="providersAdminTable">
+                        <tr>
+                            <td colspan="5" class="sba-empty-cell">Loading providers...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="providersAdminEmpty" class="sba-empty" hidden>
+                <p class="sba-strong" id="providersAdminEmptyTitle">No providers here</p>
+                <p id="providersAdminEmptyText">Try another filter or search.</p>
+            </div>
+        </div>
+
+        <!-- EDIT PANEL -->
+        <aside class="sba-side" aria-label="Edit provider">
+
+            <div id="providerToast" class="sba-toast" role="status" hidden>
+                <span id="providerToastText"></span>
+                <button type="button" id="providerToastClose" aria-label="Dismiss message">&times;</button>
+            </div>
+
+            <div id="providerEditEmpty" class="sba-detail-empty">
+                <p class="sba-strong">Select a provider</p>
+                <p>Their profile, visibility and actions appear here.</p>
+            </div>
+
+            <div id="providerEditPanel" class="sba-detail" hidden>
+
+                <div class="sba-detail-head">
+                    <div class="sba-detail-top">
+                        <span id="providerListedBadge" class="sba-badge"></span>
+                        <a id="providerPublicLink" class="sba-text-link" href="#" target="_blank" rel="noopener">View public profile</a>
+                    </div>
+                    <h2 id="providerEditTitle"></h2>
+                    <p class="sba-muted sba-break">Web address: provider.html?slug=<span id="providerSlugText"></span></p>
+                </div>
+
+                <!-- PROFILE FORM -->
+                <form id="providerEditForm" class="sba-detail-body" novalidate>
+
+                    <div class="sba-group">
+                        <h3>Public profile</h3>
+
+                        <label class="sba-field">
+                            <span class="sba-field-label">Business name *</span>
+                            <input type="text" id="editBusinessName" class="sba-input" maxlength="150" required>
+                        </label>
+
+                        <label class="sba-field">
+                            <span class="sba-field-label">Category</span>
+                            <select id="editCategory" class="sba-input"></select>
+                        </label>
+
+                        <div class="sba-field-pair">
+                            <label class="sba-field">
+                                <span class="sba-field-label">City</span>
+                                <input type="text" id="editCity" class="sba-input" maxlength="100">
+                            </label>
+                            <label class="sba-field">
+                                <span class="sba-field-label">Country</span>
+                                <input type="text" id="editCountry" class="sba-input" maxlength="100">
+                            </label>
+                        </div>
+
+                        <label class="sba-field">
+                            <span class="sba-field-label">Service area</span>
+                            <input type="text" id="editServiceArea" class="sba-input" maxlength="200">
+                        </label>
+
+                        <label class="sba-field">
+                            <span class="sba-field-label">Languages</span>
+                            <input type="text" id="editLanguages" class="sba-input" maxlength="200" placeholder="Portuguese, English, French">
+                            <span class="sba-hint">Separate languages with commas.</span>
+                        </label>
+
+                        <div class="sba-field-pair">
+                            <label class="sba-field">
+                                <span class="sba-field-label">Pricing type</span>
+                                <select id="editPricingType" class="sba-input">
+                                    <option value="fixed">Fixed price</option>
+                                    <option value="hourly">Hourly rate</option>
+                                    <option value="quote">Price on request</option>
+                                </select>
+                            </label>
+                            <label class="sba-field">
+                                <span class="sba-field-label">Starting price (€)</span>
+                                <input type="number" id="editBasePrice" class="sba-input" min="0" step="0.01" inputmode="decimal">
+                            </label>
+                        </div>
+
+                        <label class="sba-field">
+                            <span class="sba-field-label sba-field-label-row">
+                                Service description
+                                <span id="editDescriptionCount" class="sba-counter">0 / 2000</span>
+                            </span>
+                            <textarea id="editDescription" class="sba-input" rows="6" maxlength="2000"></textarea>
+                        </label>
+
+                        <div class="sba-notes-row">
+                            <span id="providerSaveStatus" class="sba-hint"></span>
+                            <button type="submit" id="providerSaveButton" class="sba-btn sba-btn-approve">Save changes</button>
+                        </div>
+                    </div>
+
+                    <div class="sba-group">
+                        <h3>Private contact (from their application)</h3>
+                        <dl class="sba-dl">
+                            <dt>Name</dt><dd id="providerContactName"></dd>
+                            <dt>Email</dt><dd id="providerContactEmail"></dd>
+                            <dt>Phone</dt><dd id="providerContactPhone"></dd>
+                            <dt>Application</dt><dd id="providerApplicationStatus"></dd>
+                        </dl>
+                    </div>
+                </form>
+
+                <!-- ACTIONS -->
+                <div class="sba-detail-foot sba-provider-actions">
+
+                    <div class="sba-action-block">
+                        <div>
+                            <p class="sba-strong" id="visibilityTitle"></p>
+                            <p class="sba-hint" id="visibilityText"></p>
+                        </div>
+                        <button type="button" id="toggleListedButton" class="sba-btn sba-btn-outline"></button>
+                    </div>
+
+                    <div class="sba-action-block" id="unapproveBlock">
+                        <div>
+                            <p class="sba-strong">Unapprove</p>
+                            <p class="sba-hint">Removes the profile from the website and moves their application back to Pending, so you can review it again.</p>
+                        </div>
+                        <button type="button" id="unapproveButton" class="sba-btn sba-btn-outline">Unapprove</button>
+                    </div>
+                    <div id="unapproveConfirm" class="sba-confirm" role="alertdialog" aria-labelledby="unapproveTitle" hidden>
+                        <p id="unapproveTitle" class="sba-confirm-title">Unapprove this provider?</p>
+                        <p>Their profile disappears from the website straight away. No email is sent. If you approve them again later, they will get the approval email again.</p>
+                        <div class="sba-btn-row">
+                            <button type="button" id="unapproveCancel" class="sba-btn sba-btn-cancel">Cancel</button>
+                            <button type="button" id="unapproveConfirmButton" class="sba-btn sba-btn-reject-solid">Yes, unapprove</button>
+                        </div>
+                    </div>
+
+                    <div class="sba-action-block sba-action-danger" id="deleteProviderBlock">
+                        <div>
+                            <p class="sba-strong">Delete provider</p>
+                            <p class="sba-hint">Permanently removes the public profile. This can't be undone.</p>
+                        </div>
+                        <button type="button" id="deleteProviderButton" class="sba-btn sba-btn-reject">Delete</button>
+                    </div>
+                    <div id="deleteProviderConfirm" class="sba-confirm" role="alertdialog" aria-labelledby="deleteProviderTitle" hidden>
+                        <p id="deleteProviderTitle" class="sba-confirm-title">Delete this provider for good?</p>
+                        <p id="deleteProviderRequestsNote"></p>
+                        <label class="sba-checkbox-line">
+                            <input type="checkbox" id="deleteApplicationToo">
+                            <span>Also delete their application and private contact details (use this if they asked you to delete their data).</span>
+                        </label>
+                        <div class="sba-btn-row">
+                            <button type="button" id="deleteProviderCancel" class="sba-btn sba-btn-cancel">Cancel</button>
+                            <button type="button" id="deleteProviderConfirmButton" class="sba-btn sba-btn-reject-solid">Yes, delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+    </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

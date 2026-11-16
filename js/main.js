@@ -4015,4 +4015,689 @@ document.addEventListener("DOMContentLoaded", function () {
       if (isAdmin) loadRequests();
     });
   }
+
+  // =====================================
+  // 17. ADMIN PROVIDERS: EDIT, HIDE, UNAPPROVE, DELETE
+  // =====================================
+  // Only admins can change providers: the database security rules enforce this.
+
+  const providersAdminTable = document.querySelector("#providersAdminTable");
+
+  if (providersAdminTable) {
+    const providersAdminSupabase = window.supabase.createClient(
+      "https://jnvirsxymqdginyatyjq.supabase.co",
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
+    );
+
+    function pa(id) {
+      return document.getElementById(id);
+    }
+
+    const providerAdminSearch = pa("providerAdminSearch");
+    const providerAdminTabs = document.querySelectorAll("[data-provider-tab]");
+    const providerEditForm = pa("providerEditForm");
+    const providerEditPanel = pa("providerEditPanel");
+    const providerEditEmpty = pa("providerEditEmpty");
+    const providerToast = pa("providerToast");
+    const providerSaveButton = pa("providerSaveButton");
+    const providerSaveStatus = pa("providerSaveStatus");
+    const toggleListedButton = pa("toggleListedButton");
+    const editDescription = pa("editDescription");
+
+    let adminProviders = [];
+    let adminCategories = [];
+    let requestCounts = {};
+    let currentApplication = null; // the selected provider's application (private)
+    let currentProviderTab = "all";
+    let selectedProviderId = null;
+    let providerBusy = false;
+    let providerFormChanged = false;
+
+    // SMALL HELPERS
+    function formatProviderDate(value) {
+      if (!value) return "Not known";
+      return new Date(value).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+
+    function formatAdminPrice(provider) {
+      const hasPrice = provider.base_price !== null && provider.base_price !== undefined;
+      if (provider.pricing_type === "quote" || !hasPrice) return "On request";
+
+      const value = Number(provider.base_price);
+      const euros = new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+      }).format(value);
+
+      return provider.pricing_type === "hourly" ? euros + "/hour" : "From " + euros;
+    }
+
+    function getSelectedProvider() {
+      return adminProviders.find(function (provider) {
+        return provider.id === selectedProviderId;
+      });
+    }
+
+    function getCategoryName(categoryId) {
+      const category = adminCategories.find(function (item) {
+        return item.id === categoryId;
+      });
+      return category ? category.name : "No category";
+    }
+
+    function showProviderToast(text, kind) {
+      pa("providerToastText").textContent = text;
+      providerToast.className = "sba-toast sba-toast-" + kind;
+      providerToast.hidden = false;
+      providerToast.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function setContactCell(id, href, text) {
+      const cell = pa(id);
+      cell.replaceChildren();
+
+      if (!text) {
+        cell.textContent = "Not provided";
+        return;
+      }
+
+      if (!href) {
+        cell.textContent = text;
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = href;
+      link.className = "sba-text-link";
+      link.textContent = text;
+      cell.appendChild(link);
+    }
+
+    function setProviderBusy(busy) {
+      providerBusy = busy;
+      document
+        .querySelectorAll("#providerEditPanel button")
+        .forEach(function (button) {
+          button.disabled = busy;
+        });
+    }
+
+    function closeConfirmBoxes() {
+      pa("unapproveConfirm").hidden = true;
+      pa("deleteProviderConfirm").hidden = true;
+      pa("deleteApplicationToo").checked = false;
+    }
+
+    // CHECK ADMIN LOGIN AND PERMISSIONS
+    async function checkProvidersAdminAccess() {
+      const { data: sessionData, error: sessionError } =
+        await providersAdminSupabase.auth.getSession();
+
+      if (sessionError || !sessionData.session) {
+        window.location.href = "login.html";
+        return false;
+      }
+
+      const { data: isAdmin, error: adminError } = await providersAdminSupabase.rpc(
+        "is_settlebridge_admin",
+      );
+
+      if (adminError || !isAdmin) {
+        alert("You do not have permission to access this page.");
+        await providersAdminSupabase.auth.signOut();
+        window.location.href = "login.html";
+        return false;
+      }
+
+      return true;
+    }
+
+    // LOAD PROVIDERS, CATEGORIES AND HOW MANY REQUESTS EACH HAS
+    async function loadAdminProviders() {
+      const [providerResult, categoryResult, requestResult] = await Promise.all([
+        providersAdminSupabase.from("providers").select("*").order("business_name"),
+        providersAdminSupabase.from("service_categories").select("id, name").order("name"),
+        providersAdminSupabase.from("service_requests").select("provider_id"),
+      ]);
+
+      if (providerResult.error || categoryResult.error) {
+        console.error("Providers error:", providerResult.error || categoryResult.error);
+        pa("adminMessage").textContent = "Unable to load providers. Please refresh the page.";
+        pa("adminMessage").hidden = false;
+        providersAdminTable.replaceChildren();
+        return;
+      }
+
+      pa("adminMessage").hidden = true;
+      adminProviders = providerResult.data || [];
+      adminCategories = categoryResult.data || [];
+
+      requestCounts = {};
+      (requestResult.data || []).forEach(function (request) {
+        if (request.provider_id) {
+          requestCounts[request.provider_id] = (requestCounts[request.provider_id] || 0) + 1;
+        }
+      });
+
+      // Fill the category dropdown once
+      const categorySelect = pa("editCategory");
+      categorySelect.replaceChildren();
+
+      const noneOption = document.createElement("option");
+      noneOption.value = "";
+      noneOption.textContent = "No category";
+      categorySelect.appendChild(noneOption);
+
+      adminCategories.forEach(function (category) {
+        const option = document.createElement("option");
+        option.value = category.id;
+        option.textContent = category.name;
+        categorySelect.appendChild(option);
+      });
+
+      updateProviderSummary();
+      renderProvidersAdminTable();
+      renderProviderEditPanel(true);
+    }
+
+    function updateProviderSummary() {
+      const listed = adminProviders.filter(function (provider) {
+        return provider.is_listed;
+      }).length;
+
+      const counts = { all: adminProviders.length, listed: listed, hidden: adminProviders.length - listed };
+
+      pa("totalProviders").textContent = counts.all;
+      pa("listedProvidersCount").textContent = counts.listed;
+      pa("hiddenProvidersCount").textContent = counts.hidden;
+
+      document.querySelectorAll("[data-provider-count]").forEach(function (element) {
+        element.textContent = counts[element.dataset.providerCount];
+      });
+    }
+
+    // DISPLAY THE TABLE
+    function renderProvidersAdminTable() {
+      const search = providerAdminSearch.value.trim().toLowerCase();
+
+      const providers = adminProviders.filter(function (provider) {
+        if (currentProviderTab === "listed" && !provider.is_listed) return false;
+        if (currentProviderTab === "hidden" && provider.is_listed) return false;
+
+        if (search) {
+          const text = [provider.business_name, provider.city].join(" ").toLowerCase();
+          if (text.indexOf(search) === -1) return false;
+        }
+
+        return true;
+      });
+
+      providersAdminTable.replaceChildren();
+      pa("providersAdminEmpty").hidden = providers.length > 0;
+      pa("providersAdminEmptyTitle").textContent =
+        adminProviders.length === 0 ? "No providers yet" : "No providers here";
+      pa("providersAdminEmptyText").textContent =
+        adminProviders.length === 0
+          ? "Approved applications appear here automatically."
+          : "Try another filter or search.";
+
+      providers.forEach(function (provider) {
+        const row = document.createElement("tr");
+        row.className = "sba-row" + (provider.id === selectedProviderId ? " is-selected" : "");
+        row.addEventListener("click", function () {
+          selectProvider(provider.id);
+        });
+
+        const nameCell = document.createElement("td");
+        const nameButton = document.createElement("button");
+        nameButton.type = "button";
+        nameButton.className = "sba-link";
+        nameButton.textContent = provider.business_name;
+        const cityLine = document.createElement("div");
+        cityLine.className = "sba-sub";
+        cityLine.textContent = provider.city || "No city";
+        nameCell.appendChild(nameButton);
+        nameCell.appendChild(cityLine);
+
+        const categoryCell = document.createElement("td");
+        categoryCell.textContent = getCategoryName(provider.category_id);
+
+        const priceCell = document.createElement("td");
+        priceCell.className = "sba-nowrap";
+        priceCell.textContent = formatAdminPrice(provider);
+
+        const updatedCell = document.createElement("td");
+        updatedCell.className = "sba-nowrap";
+        updatedCell.textContent = formatProviderDate(provider.updated_at);
+
+        const statusCell = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className = "sba-badge " + (provider.is_listed ? "sba-badge-approved" : "sba-badge-draft");
+        badge.textContent = provider.is_listed ? "Listed" : "Hidden";
+        statusCell.appendChild(badge);
+
+        row.appendChild(nameCell);
+        row.appendChild(categoryCell);
+        row.appendChild(priceCell);
+        row.appendChild(updatedCell);
+        row.appendChild(statusCell);
+        providersAdminTable.appendChild(row);
+      });
+    }
+
+    function selectProvider(providerId) {
+      if (
+        providerFormChanged &&
+        providerId !== selectedProviderId &&
+        !confirm("You have unsaved changes. Leave them without saving?")
+      ) {
+        return;
+      }
+
+      selectedProviderId = providerId;
+      providerToast.hidden = true;
+      closeConfirmBoxes();
+      renderProvidersAdminTable();
+      renderProviderEditPanel(true);
+
+      if (window.innerWidth < 900) {
+        providerEditPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    // DISPLAY THE EDIT PANEL
+    // refillForm = true puts the saved values back into the form fields
+    function renderProviderEditPanel(refillForm) {
+      const provider = getSelectedProvider();
+
+      if (!provider) {
+        providerEditEmpty.hidden = false;
+        providerEditPanel.hidden = true;
+        return;
+      }
+
+      providerEditEmpty.hidden = true;
+      providerEditPanel.hidden = false;
+
+      // Header
+      const badge = pa("providerListedBadge");
+      badge.className = "sba-badge " + (provider.is_listed ? "sba-badge-approved" : "sba-badge-draft");
+      badge.textContent = provider.is_listed ? "Listed" : "Hidden";
+
+      pa("providerEditTitle").textContent = provider.business_name;
+      pa("providerSlugText").textContent = provider.slug;
+
+      const publicLink = pa("providerPublicLink");
+      publicLink.hidden = !provider.is_listed;
+      publicLink.href = "provider.html?slug=" + encodeURIComponent(provider.slug);
+
+      // Form fields
+      if (refillForm) {
+        pa("editBusinessName").value = provider.business_name || "";
+        pa("editCategory").value = provider.category_id || "";
+        pa("editCity").value = provider.city || "";
+        pa("editCountry").value = provider.country || "";
+        pa("editServiceArea").value = provider.service_area || "";
+        pa("editLanguages").value = provider.languages || "";
+        pa("editPricingType").value = provider.pricing_type || "quote";
+        pa("editBasePrice").value =
+          provider.base_price === null || provider.base_price === undefined ? "" : provider.base_price;
+        editDescription.value = provider.description || "";
+        pa("editDescriptionCount").textContent = editDescription.value.length + " / 2000";
+
+        providerFormChanged = false;
+        providerSaveStatus.textContent = "";
+
+        loadProviderApplication(provider);
+      }
+
+      // Visibility block
+      pa("visibilityTitle").textContent = provider.is_listed
+        ? "Shown on the website"
+        : "Hidden from the website";
+      pa("visibilityText").textContent = provider.is_listed
+        ? "Hide it to take it off the Services page for now. You can show it again at any time."
+        : "Visitors can't see this profile. Show it again to put it back on the Services page.";
+      toggleListedButton.textContent = provider.is_listed ? "Hide from website" : "Show on website";
+
+      // Requests linked to this provider (for the delete warning)
+      const requestCount = requestCounts[provider.id] || 0;
+      pa("deleteProviderRequestsNote").textContent =
+        requestCount > 0
+          ? "This provider has " + requestCount + " service request(s). The requests are kept, but will no longer link to a profile."
+          : "This provider has no service requests.";
+    }
+
+    // Load the private contact details and the application's status
+    async function loadProviderApplication(provider) {
+      currentApplication = null;
+      ["providerContactName", "providerContactEmail", "providerContactPhone", "providerApplicationStatus"].forEach(
+        function (id) {
+          pa(id).textContent = "Loading...";
+        },
+      );
+      pa("unapproveBlock").hidden = false;
+
+      if (!provider.application_id) {
+        setContactCell("providerContactName", null, "");
+        setContactCell("providerContactEmail", null, "");
+        setContactCell("providerContactPhone", null, "");
+        pa("providerApplicationStatus").textContent = "Deleted or not linked";
+        pa("unapproveBlock").hidden = true;
+        updateShowButtonRule();
+        return;
+      }
+
+      const { data, error } = await providersAdminSupabase
+        .from("provider_applications")
+        .select("id, contact_name, email, phone, whatsapp, status")
+        .eq("id", provider.application_id)
+        .maybeSingle();
+
+      // Stop if another provider was selected meanwhile
+      if (selectedProviderId !== provider.id) return;
+
+      if (error || !data) {
+        pa("providerContactName").textContent = "Could not load";
+        pa("providerContactEmail").textContent = "";
+        pa("providerContactPhone").textContent = "";
+        pa("providerApplicationStatus").textContent = "Unknown";
+        pa("unapproveBlock").hidden = true;
+        return;
+      }
+
+      currentApplication = data;
+      const phone = data.whatsapp || data.phone;
+
+      setContactCell("providerContactName", null, data.contact_name);
+      setContactCell("providerContactEmail", "mailto:" + data.email, data.email);
+      setContactCell("providerContactPhone", "tel:" + (phone || "").replace(/[^\d+]/g, ""), phone);
+      pa("providerApplicationStatus").textContent =
+        data.status.charAt(0).toUpperCase() + data.status.slice(1);
+
+      // Unapprove only makes sense for an approved application
+      pa("unapproveBlock").hidden = data.status !== "approved";
+      updateShowButtonRule();
+    }
+
+    // A provider whose application is no longer approved should not be shown
+    function updateShowButtonRule() {
+      const provider = getSelectedProvider();
+      if (!provider) return;
+
+      const applicationNotApproved = currentApplication && currentApplication.status !== "approved";
+      toggleListedButton.disabled = providerBusy || (!provider.is_listed && applicationNotApproved);
+
+      if (!provider.is_listed && applicationNotApproved) {
+        pa("visibilityText").textContent =
+          "Their application is " + currentApplication.status +
+          ". Approve it again in Applications to put the profile back on the website.";
+      }
+    }
+
+    // SAVE PROFILE CHANGES
+    providerEditForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      const provider = getSelectedProvider();
+      if (!provider || providerBusy) return;
+
+      const businessName = pa("editBusinessName").value.trim();
+      const pricingType = pa("editPricingType").value;
+      const priceText = pa("editBasePrice").value.trim();
+      const basePrice = priceText === "" ? null : Number(priceText);
+
+      if (businessName.length < 1) {
+        showProviderToast("Please enter a business name.", "error");
+        pa("editBusinessName").focus();
+        return;
+      }
+
+      if (basePrice !== null && (!Number.isFinite(basePrice) || basePrice < 0)) {
+        showProviderToast("Please enter a starting price of 0 or more, or leave it empty.", "error");
+        pa("editBasePrice").focus();
+        return;
+      }
+
+      if (pricingType !== "quote" && basePrice === null) {
+        showProviderToast('Please add a starting price, or choose "Price on request".', "error");
+        pa("editBasePrice").focus();
+        return;
+      }
+
+      const changes = {
+        business_name: businessName,
+        category_id: pa("editCategory").value || null,
+        city: pa("editCity").value.trim() || null,
+        country: pa("editCountry").value.trim() || null,
+        service_area: pa("editServiceArea").value.trim() || null,
+        languages: pa("editLanguages").value.trim() || null,
+        pricing_type: pricingType,
+        base_price: pricingType === "quote" ? null : Math.round(basePrice * 100) / 100,
+        description: editDescription.value.trim(),
+      };
+
+      setProviderBusy(true);
+      providerSaveStatus.textContent = "Saving...";
+
+      try {
+        const { data, error } = await providersAdminSupabase
+          .from("providers")
+          .update(changes)
+          .eq("id", provider.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Provider save error:", error);
+          providerSaveStatus.textContent = "Not saved";
+          showProviderToast("Could not save the changes. Please try again.", "error");
+          return;
+        }
+
+        Object.assign(provider, data);
+        providerFormChanged = false;
+        providerSaveStatus.textContent = "Saved";
+        showProviderToast("Profile updated." + (provider.is_listed ? " The changes are live." : ""), "success");
+      } finally {
+        setProviderBusy(false);
+        renderProvidersAdminTable();
+        renderProviderEditPanel(false);
+        updateShowButtonRule();
+      }
+    });
+
+    providerEditForm.addEventListener("input", function () {
+      providerFormChanged = true;
+      providerSaveStatus.textContent = "Unsaved changes";
+      pa("editDescriptionCount").textContent = editDescription.value.length + " / 2000";
+    });
+
+    // HIDE OR SHOW ON THE WEBSITE
+    toggleListedButton.addEventListener("click", async function () {
+      const provider = getSelectedProvider();
+      if (!provider || providerBusy) return;
+
+      const makeListed = !provider.is_listed;
+      setProviderBusy(true);
+
+      try {
+        const { data, error } = await providersAdminSupabase
+          .from("providers")
+          .update({ is_listed: makeListed })
+          .eq("id", provider.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Visibility error:", error);
+          showProviderToast("Could not change visibility. Please try again.", "error");
+          return;
+        }
+
+        Object.assign(provider, data);
+        showProviderToast(
+          makeListed ? "The profile is back on the website." : "The profile is now hidden from the website.",
+          "success",
+        );
+      } finally {
+        setProviderBusy(false);
+        updateProviderSummary();
+        renderProvidersAdminTable();
+        renderProviderEditPanel(false);
+        updateShowButtonRule();
+      }
+    });
+
+    // UNAPPROVE: application back to Pending (the database then hides the profile)
+    pa("unapproveButton").addEventListener("click", function () {
+      closeConfirmBoxes();
+      pa("unapproveConfirm").hidden = false;
+      pa("unapproveCancel").focus();
+    });
+
+    pa("unapproveCancel").addEventListener("click", closeConfirmBoxes);
+
+    pa("unapproveConfirmButton").addEventListener("click", async function () {
+      const provider = getSelectedProvider();
+      if (!provider || !provider.application_id || providerBusy) return;
+
+      setProviderBusy(true);
+
+      try {
+        const { error } = await providersAdminSupabase
+          .from("provider_applications")
+          .update({
+            status: "pending",
+            reviewed_at: null,
+            decision_email_sent_at: null,
+            decision_email_error: null,
+          })
+          .eq("id", provider.application_id)
+          .eq("status", "approved");
+
+        if (error) {
+          console.error("Unapprove error:", error);
+          showProviderToast("Could not unapprove this provider. Please try again.", "error");
+          return;
+        }
+
+        closeConfirmBoxes();
+        showProviderToast(
+          "Unapproved. The profile is hidden and the application is back in Applications as Pending.",
+          "success",
+        );
+      } finally {
+        setProviderBusy(false);
+        await loadAdminProviders();
+      }
+    });
+
+    // DELETE
+    pa("deleteProviderButton").addEventListener("click", function () {
+      closeConfirmBoxes();
+      pa("deleteProviderConfirm").hidden = false;
+      pa("deleteProviderCancel").focus();
+    });
+
+    pa("deleteProviderCancel").addEventListener("click", closeConfirmBoxes);
+
+    pa("deleteProviderConfirmButton").addEventListener("click", async function () {
+      const provider = getSelectedProvider();
+      if (!provider || providerBusy) return;
+
+      const deleteApplication = pa("deleteApplicationToo").checked && !!provider.application_id;
+      setProviderBusy(true);
+
+      try {
+        const { data, error } = await providersAdminSupabase
+          .from("providers")
+          .delete()
+          .eq("id", provider.id)
+          .select("id");
+
+        if (error || !data || data.length === 0) {
+          console.error("Provider delete error:", error);
+          showProviderToast("Could not delete this provider. Please try again.", "error");
+          return;
+        }
+
+        let message = "Provider deleted.";
+
+        if (deleteApplication) {
+          const { data: deletedApplications, error: applicationError } =
+            await providersAdminSupabase
+              .from("provider_applications")
+              .delete()
+              .eq("id", provider.application_id)
+              .select("id");
+
+          if (applicationError || !deletedApplications || deletedApplications.length === 0) {
+            console.error("Application delete error:", applicationError);
+            message =
+              "Provider deleted, but their application could not be deleted. Delete it in Supabase or try again.";
+          } else {
+            message = "Provider and their application deleted.";
+          }
+        }
+
+        selectedProviderId = null;
+        providerFormChanged = false;
+        closeConfirmBoxes();
+        showProviderToast(message, deleteApplication && message.indexOf("could not") !== -1 ? "warning" : "success");
+      } finally {
+        setProviderBusy(false);
+        await loadAdminProviders();
+      }
+    });
+
+    // FILTERS, MESSAGES AND LOGOUT
+    providerAdminTabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        currentProviderTab = tab.dataset.providerTab;
+
+        providerAdminTabs.forEach(function (otherTab) {
+          const isActive = otherTab === tab;
+          otherTab.classList.toggle("is-active", isActive);
+          otherTab.setAttribute("aria-pressed", String(isActive));
+        });
+
+        renderProvidersAdminTable();
+      });
+    });
+
+    providerAdminSearch.addEventListener("input", renderProvidersAdminTable);
+
+    pa("providerToastClose").addEventListener("click", function () {
+      providerToast.hidden = true;
+    });
+
+    window.addEventListener("beforeunload", function (event) {
+      if (providerFormChanged) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    });
+
+    const providersLogout = pa("adminLogout");
+    if (providersLogout) {
+      providersLogout.addEventListener("click", async function () {
+        if (providerFormChanged && !confirm("You have unsaved changes. Log out anyway?")) return;
+
+        providerFormChanged = false;
+        await providersAdminSupabase.auth.signOut();
+        window.location.href = "login.html";
+      });
+    }
+
+    // START
+    checkProvidersAdminAccess().then(function (isAdmin) {
+      if (isAdmin) loadAdminProviders();
+    });
+  }
 });
