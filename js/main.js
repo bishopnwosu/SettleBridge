@@ -4047,6 +4047,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let adminProviders = [];
     let adminCategories = [];
     let requestCounts = {};
+    let agreementsByProvider = {}; // latest agreement for each provider
     let currentApplication = null; // the selected provider's application (private)
     let currentProviderTab = "all";
     let selectedProviderId = null;
@@ -4159,10 +4160,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // LOAD PROVIDERS, CATEGORIES AND HOW MANY REQUESTS EACH HAS
     async function loadAdminProviders() {
-      const [providerResult, categoryResult, requestResult] = await Promise.all([
+      const [providerResult, categoryResult, requestResult, agreementResult] = await Promise.all([
         providersAdminSupabase.from("providers").select("*").order("business_name"),
         providersAdminSupabase.from("service_categories").select("id, name").order("name"),
         providersAdminSupabase.from("service_requests").select("provider_id"),
+        providersAdminSupabase
+          .from("provider_agreements")
+          .select(
+            "id, provider_id, application_id, reference, status, sent_at, email_sent_at, email_error, signed_at, signer_name, signer_ip, signed_language, signed_email_sent_at",
+          )
+          .order("created_at", { ascending: false }),
       ]);
 
       if (providerResult.error || categoryResult.error) {
@@ -4200,9 +4207,37 @@ document.addEventListener("DOMContentLoaded", function () {
         categorySelect.appendChild(option);
       });
 
+      // Latest agreement per provider (a signed one wins over a newer unsigned one)
+      agreementsByProvider = {};
+      const agreements = agreementResult.error ? [] : agreementResult.data || [];
+      adminProviders.forEach(function (provider) {
+        const own = agreements.filter(function (agreement) {
+          return (
+            agreement.provider_id === provider.id ||
+            (provider.application_id && agreement.application_id === provider.application_id)
+          );
+        });
+        agreementsByProvider[provider.id] =
+          own.find(function (agreement) {
+            return agreement.status === "signed";
+          }) ||
+          own.find(function (agreement) {
+            return agreement.status === "sent";
+          }) ||
+          own[0] ||
+          null;
+      });
+
       updateProviderSummary();
       renderProvidersAdminTable();
       renderProviderEditPanel(true);
+    }
+
+    function getAgreementLabel(agreement) {
+      if (!agreement) return "No agreement";
+      if (agreement.status === "signed") return "Agreement signed";
+      if (agreement.status === "void") return "Agreement replaced";
+      return "Agreement sent";
     }
 
     function updateProviderSummary() {
@@ -4280,6 +4315,13 @@ document.addEventListener("DOMContentLoaded", function () {
         badge.className = "sba-badge " + (provider.is_listed ? "sba-badge-approved" : "sba-badge-draft");
         badge.textContent = provider.is_listed ? "Listed" : "Hidden";
         statusCell.appendChild(badge);
+
+        const agreement = agreementsByProvider[provider.id];
+        const agreementLine = document.createElement("div");
+        agreementLine.className =
+          "sba-agreement-line" + (agreement && agreement.status === "signed" ? " is-signed" : "");
+        agreementLine.textContent = getAgreementLabel(agreement);
+        statusCell.appendChild(agreementLine);
 
         row.appendChild(nameCell);
         row.appendChild(categoryCell);
@@ -4365,6 +4407,9 @@ document.addEventListener("DOMContentLoaded", function () {
         : "Visitors can't see this profile. Show it again to put it back on the Services page.";
       toggleListedButton.textContent = provider.is_listed ? "Hide from website" : "Show on website";
 
+      // Provider agreement
+      renderAgreementDetails(agreementsByProvider[provider.id]);
+
       // Requests linked to this provider (for the delete warning)
       const requestCount = requestCounts[provider.id] || 0;
       pa("deleteProviderRequestsNote").textContent =
@@ -4372,6 +4417,105 @@ document.addEventListener("DOMContentLoaded", function () {
           ? "This provider has " + requestCount + " service request(s). The requests are kept, but will no longer link to a profile."
           : "This provider has no service requests.";
     }
+
+    function renderAgreementDetails(agreement) {
+      const statusCell = pa("agreementStatusCell");
+      statusCell.replaceChildren();
+
+      const badge = document.createElement("span");
+      badge.className =
+        "sba-badge " +
+        (!agreement
+          ? "sba-badge-draft"
+          : agreement.status === "signed"
+            ? "sba-badge-approved"
+            : agreement.status === "void"
+              ? "sba-badge-draft"
+              : "sba-badge-request-new");
+      badge.textContent = !agreement
+        ? "None"
+        : agreement.status === "signed"
+          ? "Signed"
+          : agreement.status === "void"
+            ? "Replaced"
+            : "Waiting for signature";
+      statusCell.appendChild(badge);
+
+      pa("agreementReferenceCell").textContent = agreement ? agreement.reference : "Not provided";
+
+      pa("agreementSentCell").textContent = !agreement
+        ? "Not sent"
+        : formatProviderDate(agreement.sent_at) +
+          (agreement.email_sent_at
+            ? " (emailed)"
+            : agreement.email_error
+              ? " (email failed)"
+              : "");
+
+      pa("agreementSignedCell").textContent =
+        agreement && agreement.status === "signed"
+          ? formatProviderDate(agreement.signed_at) +
+            " by " + agreement.signer_name +
+            (agreement.signer_ip ? " (IP " + agreement.signer_ip + ")" : "") +
+            (agreement.signed_language === "pt" ? ", in Portuguese" : "")
+          : "Not yet";
+
+      let hint = "";
+      if (!agreement) {
+        hint = "Providers approved before agreements were set up have none.";
+      } else if (agreement.status === "sent") {
+        hint = "Signing links expire 30 days after sending.";
+      } else if (agreement.status === "signed" && !agreement.signed_email_sent_at) {
+        hint = "The signed copy was not emailed. Download it and send it yourself.";
+      }
+      pa("agreementHint").textContent = hint;
+
+      const downloadButton = pa("downloadAgreementAdmin");
+      downloadButton.hidden = !agreement;
+      downloadButton.textContent =
+        agreement && agreement.status === "signed" ? "Download signed PDF" : "Download PDF";
+    }
+
+    pa("downloadAgreementAdmin").addEventListener("click", async function () {
+      const provider = getSelectedProvider();
+      const agreement = provider && agreementsByProvider[provider.id];
+      if (!agreement) return;
+
+      const button = this;
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = "Preparing PDF...";
+
+      try {
+        const { data, error } = await providersAdminSupabase.functions.invoke("provider-agreement", {
+          body: { action: "admin-download", agreementId: agreement.id },
+        });
+
+        if (error || !data || !data.pdfBase64) {
+          console.error("Agreement download error:", error);
+          showProviderToast("Could not download the agreement. Please try again.", "error");
+          return;
+        }
+
+        const binary = atob(data.pdfBase64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+        const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () {
+          URL.revokeObjectURL(url);
+        }, 10000);
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    });
 
     // Load the private contact details and the application's status
     async function loadProviderApplication(provider) {

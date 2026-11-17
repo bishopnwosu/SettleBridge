@@ -5128,3 +5128,18 @@ fieldset.filter-group:last-child {
         padding: 18px;
     }
 }
+
+
+/* =====================================
+   ADMIN PROVIDERS: AGREEMENT STATUS
+===================================== */
+
+.sba-agreement-line {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #92400E;
+}
+
+.sba-agreement-line.is-signed {
+    color: #166534;
+}
