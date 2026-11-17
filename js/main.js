@@ -4700,4 +4700,403 @@ document.addEventListener("DOMContentLoaded", function () {
       if (isAdmin) loadAdminProviders();
     });
   }
+
+  // =====================================
+  // 18. PROVIDER AGREEMENT SIGNING PAGE
+  // =====================================
+  // Providers are not logged in. The secret link (?token=...) proves who they are,
+  // and the database only lets that link read and sign its own agreement.
+
+  const signPage = document.querySelector("#signPage");
+
+  if (signPage) {
+    const signSupabase = window.supabase.createClient(
+      "https://jnvirsxymqdginyatyjq.supabase.co",
+      "sb_publishable_axNzNrJ9AD2qZeS7EYHrFA_pTYlnfs8",
+    );
+
+    // Name (address) of the "provider-agreement" Edge Function in Supabase
+    const AGREEMENT_FUNCTION_NAME = "provider-agreement";
+
+    const signToken = (new URLSearchParams(window.location.search).get("token") || "")
+      .trim()
+      .toLowerCase();
+
+    const signStatus = document.querySelector("#signStatus");
+    const signProblem = document.querySelector("#signProblem");
+    const signForm = document.querySelector("#signForm");
+    const signDone = document.querySelector("#signDone");
+    const signError = document.querySelector("#signError");
+    const signSubmit = document.querySelector("#signSubmit");
+    const signerName = document.querySelector("#signerName");
+    const signaturePad = document.querySelector("#signaturePad");
+    const languageButtons = document.querySelectorAll("[data-language]");
+
+    let agreementInfo = null;
+    let currentLanguage = "en";
+    const contentCache = {};
+    let hasDrawnSignature = false;
+
+    function showProblem(title, text) {
+      signStatus.hidden = true;
+      signPage.hidden = true;
+      document.querySelector("#signProblemTitle").textContent = title;
+      document.querySelector("#signProblemText").textContent = text;
+      signProblem.hidden = false;
+    }
+
+    function formatSignDate(value, withTime) {
+      const options = { day: "numeric", month: "long", year: "numeric" };
+      if (withTime) {
+        options.hour = "2-digit";
+        options.minute = "2-digit";
+      }
+      // The page itself is in English, so dates are shown in English too
+      return new Date(value).toLocaleString("en-GB", options);
+    }
+
+    // Save a PDF (sent as base64 text) to the person's device
+    function downloadPdf(base64, filename) {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 10000);
+    }
+
+    async function callAgreementFunction(body) {
+      const { data, error } = await signSupabase.functions.invoke(AGREEMENT_FUNCTION_NAME, { body: body });
+
+      if (error) {
+        let message = "Something went wrong. Please try again.";
+        if (error.context && typeof error.context.json === "function") {
+          try {
+            const details = await error.context.json();
+            if (details.error) message = details.error;
+          } catch (readError) {
+            // keep the default message
+          }
+        }
+        throw new Error(message);
+      }
+
+      return data;
+    }
+
+    // SHOW THE AGREEMENT TEXT (always as plain text, never as HTML)
+    async function loadAgreementText(language) {
+      if (!contentCache[language]) {
+        const { data, error } = await signSupabase
+          .from("agreement_versions")
+          .select("content")
+          .eq("version", agreementInfo.version)
+          .eq("language", language)
+          .maybeSingle();
+
+        if (error || !data) throw new Error("Agreement text not found");
+        contentCache[language] = data.content;
+      }
+
+      const content = contentCache[language];
+      const fill = function (text) {
+        return String(text)
+          .replace(/\{businessName\}/g, agreementInfo.business_name || "")
+          .replace(/\{contactName\}/g, agreementInfo.contact_name || agreementInfo.business_name || "");
+      };
+
+      document.documentElement.lang = language === "pt" ? "pt-PT" : "en";
+      document.querySelector("#agreementTitle").textContent = content.title;
+      document.querySelector("#agreementReferenceLabel").textContent = content.labels.reference;
+      document.querySelector("#agreementIntro").textContent = fill(content.intro);
+
+      const draftNote = document.querySelector("#agreementDraftNote");
+      draftNote.textContent = content.labels.draft;
+      draftNote.hidden = !/\[/.test(JSON.stringify(content.sections));
+
+      const sections = document.querySelector("#agreementSections");
+      sections.replaceChildren();
+
+      content.sections.forEach(function (section) {
+        const block = document.createElement("section");
+        block.className = "sbs-section";
+
+        const heading = document.createElement("h2");
+        heading.textContent = section.heading;
+        block.appendChild(heading);
+
+        (section.paragraphs || []).forEach(function (text) {
+          const paragraph = document.createElement("p");
+          paragraph.textContent = fill(text);
+          block.appendChild(paragraph);
+        });
+
+        if (section.bullets && section.bullets.length) {
+          const list = document.createElement("ul");
+          section.bullets.forEach(function (text) {
+            const item = document.createElement("li");
+            item.textContent = fill(text);
+            list.appendChild(item);
+          });
+          block.appendChild(list);
+        }
+
+        sections.appendChild(block);
+      });
+
+      currentLanguage = language;
+      languageButtons.forEach(function (button) {
+        const active = button.dataset.language === language;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+    }
+
+    function showSigned(name, signedAt, emailSent) {
+      signForm.hidden = true;
+      signDone.hidden = false;
+
+      let text =
+        "Signed by " + name + " on " + formatSignDate(signedAt, true) + ".";
+      if (emailSent === true) text += " We have emailed you a signed copy.";
+      if (emailSent === false) text += " We could not email your copy just now, so please download it below.";
+
+      document.querySelector("#signDoneText").textContent = text;
+    }
+
+    // LOAD THE AGREEMENT FOR THIS LINK
+    async function loadSigningPage() {
+      if (!/^[a-f0-9]{64}$/.test(signToken)) {
+        showProblem(
+          "This link is not valid",
+          'Please use the "Review and sign" button in your approval email. If it still does not work, contact us.',
+        );
+        return;
+      }
+
+      const { data, error } = await signSupabase.rpc("get_agreement_for_signing", { p_token: signToken });
+      const info = data && data[0];
+
+      if (error || !info) {
+        if (error) console.error("Agreement error:", error);
+        showProblem(
+          error ? "We could not load your agreement" : "This link is not valid",
+          error
+            ? "Please check your internet connection and try again."
+            : 'Please use the "Review and sign" button in your approval email. If it still does not work, contact us.',
+        );
+        return;
+      }
+
+      if (info.status === "void") {
+        showProblem(
+          "This agreement has been replaced",
+          "A newer agreement was sent to you. Please use the link in your most recent approval email.",
+        );
+        return;
+      }
+
+      if (info.is_expired) {
+        showProblem(
+          "This link has expired",
+          "Signing links are valid for 30 days. Please contact us and we will send you a new one.",
+        );
+        return;
+      }
+
+      agreementInfo = info;
+      document.querySelector("#agreementBusiness").textContent = info.business_name;
+      document.querySelector("#agreementReference").textContent = info.reference;
+      document.querySelector("#signBusinessName").textContent = info.business_name;
+      signerName.value = info.contact_name || "";
+
+      try {
+        await loadAgreementText("en");
+      } catch (textError) {
+        console.error(textError);
+        showProblem("We could not load your agreement", "Please refresh the page or contact us.");
+        return;
+      }
+
+      if (info.status === "signed") {
+        showSigned(info.signer_name, info.signed_at, null);
+      }
+
+      signStatus.hidden = true;
+      signPage.hidden = false;
+    }
+
+    // LANGUAGE BUTTONS
+    languageButtons.forEach(function (button) {
+      button.addEventListener("click", async function () {
+        try {
+          await loadAgreementText(button.dataset.language);
+        } catch (languageError) {
+          console.error(languageError);
+          alert("Sorry, this language is not available right now.");
+        }
+      });
+    });
+
+    // DOWNLOAD BUTTONS
+    async function handleDownload(button) {
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = "Preparing PDF...";
+
+      try {
+        const result = await callAgreementFunction({
+          action: "download",
+          token: signToken,
+          language: currentLanguage,
+        });
+        downloadPdf(result.pdfBase64, result.filename);
+      } catch (downloadError) {
+        alert(downloadError.message);
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    }
+
+    document.querySelector("#downloadAgreementButton").addEventListener("click", function () {
+      handleDownload(this);
+    });
+
+    document.querySelector("#downloadSignedButton").addEventListener("click", function () {
+      handleDownload(this);
+    });
+
+    // SIGNATURE PAD (mouse, finger or stylus)
+    const padContext = signaturePad.getContext("2d");
+    let drawing = false;
+
+    function setUpPad() {
+      const ratio = window.devicePixelRatio || 1;
+      const width = signaturePad.clientWidth || 500;
+      const height = signaturePad.clientHeight || 160;
+      signaturePad.width = Math.round(width * ratio);
+      signaturePad.height = Math.round(height * ratio);
+      padContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+      padContext.lineWidth = 2.5;
+      padContext.lineCap = "round";
+      padContext.lineJoin = "round";
+      padContext.strokeStyle = "#0A3D62";
+      hasDrawnSignature = false;
+    }
+
+    function padPoint(event) {
+      const rect = signaturePad.getBoundingClientRect();
+      return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    }
+
+    signaturePad.addEventListener("pointerdown", function (event) {
+      drawing = true;
+      signaturePad.setPointerCapture(event.pointerId);
+      const point = padPoint(event);
+      padContext.beginPath();
+      padContext.moveTo(point.x, point.y);
+      event.preventDefault();
+    });
+
+    signaturePad.addEventListener("pointermove", function (event) {
+      if (!drawing) return;
+      const point = padPoint(event);
+      padContext.lineTo(point.x, point.y);
+      padContext.stroke();
+      hasDrawnSignature = true;
+      event.preventDefault();
+    });
+
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (type) {
+      signaturePad.addEventListener(type, function () {
+        drawing = false;
+      });
+    });
+
+    document.querySelector("#clearSignature").addEventListener("click", setUpPad);
+
+    // Smaller image for storage: copy the drawing onto a 500 x 160 canvas
+    function getSignatureBase64() {
+      if (!hasDrawnSignature) return null;
+
+      const output = document.createElement("canvas");
+      output.width = 500;
+      output.height = 160;
+      output.getContext("2d").drawImage(signaturePad, 0, 0, 500, 160);
+
+      return output.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+    }
+
+    // SIGN
+    signForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      signError.hidden = true;
+
+      const name = signerName.value.trim();
+
+      if (name.length < 2) {
+        signError.textContent = "Please type your full name.";
+        signError.hidden = false;
+        signerName.focus();
+        return;
+      }
+
+      if (!document.querySelector("#signAgree").checked) {
+        signError.textContent = "Please tick the box to confirm you agree.";
+        signError.hidden = false;
+        return;
+      }
+
+      signSubmit.disabled = true;
+      signSubmit.textContent = "Signing...";
+
+      try {
+        const { error } = await signSupabase.rpc("sign_provider_agreement", {
+          p_token: signToken,
+          p_signer_name: name,
+          p_language: currentLanguage,
+          p_signature_png: getSignatureBase64(),
+        });
+
+        if (error) {
+          const text = String(error.message || "");
+          let message = "Sorry, we could not sign the agreement. Please try again.";
+          if (text.indexOf("already_signed") !== -1) message = "This agreement has already been signed.";
+          if (text.indexOf("link_expired") !== -1) message = "This link has expired. Please contact us for a new one.";
+          if (text.indexOf("agreement_void") !== -1) message = "This agreement has been replaced. Please use the link in your latest email.";
+          throw new Error(message);
+        }
+
+        // Create the signed copy and email it to the provider
+        let emailSent = false;
+        try {
+          const result = await callAgreementFunction({ action: "signed-copy", token: signToken });
+          emailSent = !!result.emailSent;
+        } catch (copyError) {
+          console.error("Signed copy error:", copyError);
+        }
+
+        showSigned(name, new Date().toISOString(), emailSent);
+        signDone.focus();
+      } catch (signFailure) {
+        signError.textContent = signFailure.message;
+        signError.hidden = false;
+      } finally {
+        signSubmit.disabled = false;
+        signSubmit.textContent = "Sign agreement";
+      }
+    });
+
+    setUpPad();
+    loadSigningPage();
+  }
 });
