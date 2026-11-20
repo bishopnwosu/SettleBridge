@@ -328,6 +328,9 @@ const SHOW_DRAFT_BANNER = (Deno.env.get("AGREEMENT_DRAFT") ?? "true") !== "false
 // Optional: if you add the secret ADMIN_NOTIFICATION_EMAIL, you get a copy of every signed agreement
 const ADMIN_NOTIFICATION_EMAIL = Deno.env.get("ADMIN_NOTIFICATION_EMAIL") ?? "";
 
+// Website address used in the "Review and sign" link in reminders
+const SITE_URL = (Deno.env.get("PUBLIC_SITE_URL") ?? "https://settlebridgee.netlify.app").replace(/\/+$/, "");
+
 // Only these websites may call this function from a browser.
 const ALLOWED_ORIGINS = [
   "https://settlebridgee.netlify.app", // live site on Netlify
@@ -341,7 +344,7 @@ function corsHeadersFor(req: Request) {
 
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-reminder-secret",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
@@ -364,6 +367,76 @@ function base64ToBytes(base64: string): Uint8Array {
 }
 
 const TOKEN_PATTERN = /^[a-f0-9]{64}$/;
+
+function randomHex(byteCount: number): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(byteCount));
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ---------- REMINDER EMAIL ----------
+// deno-lint-ignore no-explicit-any
+async function sendReminderEmail(agreement: any, token: string, pdf: { bytes: Uint8Array; filename: string }, reminderNumber: number) {
+  const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
+  const emailFrom = Deno.env.get("EMAIL_FROM") ?? "SettleBridge <onboarding@resend.dev>";
+  const signUrl = SITE_URL + "/sign-agreement.html?token=" + token;
+  const name = escapeHtml(agreement.contact_name || agreement.business_name || "there");
+  const reference = escapeHtml(agreement.reference);
+
+  const html = `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#F4F7FA;font-family:Arial,Helvetica,sans-serif;color:#172B3A;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F7FA;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:8px;overflow:hidden;">
+        <tr><td style="background:#0A3D62;padding:24px;text-align:center;">
+          <div style="color:#FFFFFF;font-size:24px;font-weight:bold;">SettleBridge</div>
+          <div style="color:#FFFFFF;font-size:13px;margin-top:6px;">Arrive with a plan. Settle with confidence.</div>
+        </td></tr>
+        <tr><td style="padding:32px 28px;font-size:15px;line-height:1.6;">
+          <span style="display:inline-block;background:#0A3D62;color:#FFFFFF;font-size:12px;font-weight:bold;padding:6px 12px;border-radius:999px;">Reminder</span>
+          <h1 style="font-size:22px;color:#0A3D62;margin:20px 0 14px;">Please sign your provider agreement</h1>
+          <p style="margin:0 0 14px;">Hello ${name},</p>
+          <p style="margin:0 0 14px;">Your SettleBridge provider agreement (reference <strong>${reference}</strong>) is still waiting for your signature. The agreement is attached again as a PDF.</p>
+          <p style="margin:0 0 14px;"><a href="${escapeHtml(signUrl)}" style="display:inline-block;background:#0E7C66;color:#FFFFFF;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:6px;">Review and sign the agreement</a></p>
+          <p style="margin:0 0 14px;font-size:13px;color:#5B6B78;">This is a new personal link, valid for 30 days. Links in our earlier emails no longer work. If you have a question about the agreement, simply reply to this email.</p>
+          <p style="margin:24px 0 0;">Kind regards,<br>The SettleBridge Team</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `Hello ${agreement.contact_name || agreement.business_name || "there"},\n\nYour SettleBridge provider agreement (reference ${agreement.reference}) is still waiting for your signature. The agreement is attached again as a PDF.\n\nReview and sign the agreement:\n${signUrl}\n\nThis is a new personal link, valid for 30 days. Links in our earlier emails no longer work.\n\nKind regards,\nThe SettleBridge Team`;
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `agreement-${agreement.id}-reminder-${reminderNumber}-${token.slice(0, 8)}`,
+      },
+      body: JSON.stringify({
+        from: emailFrom,
+        to: [agreement.email],
+        subject: "Reminder: please sign your SettleBridge provider agreement (" + agreement.reference + ")",
+        html,
+        text,
+        attachments: [{ filename: pdf.filename, content: bytesToBase64(pdf.bytes) }],
+      }),
+    });
+
+    if (response.ok) return null;
+    return `Resend error ${response.status}: ${await response.text()}`.slice(0, 500);
+  } catch (err) {
+    return `Could not reach Resend: ${String(err)}`.slice(0, 500);
+  }
+}
 
 // deno-lint-ignore no-explicit-any
 async function loadContent(supabase: any, version: string, language: string) {
@@ -457,6 +530,127 @@ Deno.serve(async (req) => {
   const action = body?.action;
 
   try {
+    // ---------- AUTOMATIC DAILY REMINDERS (called by the scheduled job) ----------
+    if (action === "auto-remind") {
+      const secret = req.headers.get("x-reminder-secret") ?? "";
+      const cronClient = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
+
+      // The database checks the private secret; without it, nothing is returned
+      const { data: due, error: dueError } = await cronClient.rpc("agreements_due_for_reminder", {
+        p_secret: secret,
+      });
+
+      if (dueError) {
+        console.error("Reminder check refused", dueError.message);
+        return jsonResponse({ error: "Not allowed." }, 403);
+      }
+
+      let sent = 0;
+      let failed = 0;
+
+      // deno-lint-ignore no-explicit-any
+      for (const row of (due ?? []) as any[]) {
+        try {
+          const token = randomHex(32);
+          const { data: changed } = await cronClient.rpc("agreement_reminder_new_link", {
+            p_secret: secret,
+            p_agreement_id: row.id,
+            p_token_hash: await sha256Hex(token),
+          });
+          if (!changed) continue; // signed in the meantime
+
+          const pdf = await makePdf(cronClient, { ...row, status: "sent" }, "en", false);
+          const reminderError = await sendReminderEmail(row, token, pdf, row.reminder_count + 1);
+
+          await cronClient.rpc("agreement_reminder_record", {
+            p_secret: secret,
+            p_agreement_id: row.id,
+            p_error: reminderError,
+          });
+
+          if (reminderError) {
+            failed += 1;
+            console.error("Reminder failed", row.reference, reminderError);
+          } else {
+            sent += 1;
+          }
+        } catch (err) {
+          failed += 1;
+          console.error("Reminder failed", row.reference, err instanceof Error ? err.message : err);
+        }
+
+        await wait(700); // stay within the email service's sending speed limit
+      }
+
+      console.log("Agreement reminders:", { due: (due ?? []).length, sent, failed });
+      return jsonResponse({ ok: true, due: (due ?? []).length, sent, failed });
+    }
+
+    // ---------- ADMIN: SEND A REMINDER NOW ----------
+    if (action === "admin-remind") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return jsonResponse({ error: "Not logged in." }, 401);
+
+      const adminClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false },
+      });
+
+      const { data: isAdmin, error: adminError } = await adminClient.rpc("is_settlebridge_admin");
+      if (adminError || isAdmin !== true) return jsonResponse({ error: "Not authorised." }, 403);
+
+      if (typeof body.agreementId !== "string") {
+        return jsonResponse({ error: "Missing agreement ID." }, 400);
+      }
+
+      const { data: agreement } = await adminClient
+        .from("provider_agreements")
+        .select("*")
+        .eq("id", body.agreementId)
+        .maybeSingle();
+
+      if (!agreement) return jsonResponse({ error: "Agreement not found." }, 404);
+      if (agreement.status !== "sent") {
+        return jsonResponse({ error: "Only agreements waiting for a signature can be reminded." }, 409);
+      }
+
+      // New personal link, valid for another 30 days
+      const token = randomHex(32);
+      const { error: linkError } = await adminClient
+        .from("provider_agreements")
+        .update({
+          token_hash: await sha256Hex(token),
+          token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+        .eq("id", agreement.id)
+        .eq("status", "sent");
+
+      if (linkError) {
+        console.error("Reminder link error", linkError.message);
+        return jsonResponse({ error: "Could not create a new signing link." }, 500);
+      }
+
+      const pdf = await makePdf(adminClient, agreement, "en", false);
+      const reminderNumber = (agreement.reminder_count ?? 0) + 1;
+      const reminderError = await sendReminderEmail(agreement, token, pdf, reminderNumber);
+
+      await adminClient
+        .from("provider_agreements")
+        .update(
+          reminderError
+            ? { reminder_error: reminderError }
+            : { reminder_count: reminderNumber, last_reminder_at: new Date().toISOString(), reminder_error: null },
+        )
+        .eq("id", agreement.id);
+
+      if (reminderError) {
+        console.error("Reminder failed", agreement.reference, reminderError);
+        return jsonResponse({ error: "The reminder email could not be sent. Please try again." }, 502);
+      }
+
+      return jsonResponse({ ok: true, reminderCount: reminderNumber });
+    }
+
     // ---------- ADMIN: DOWNLOAD ANY AGREEMENT ----------
     if (action === "admin-download") {
       const authHeader = req.headers.get("Authorization");

@@ -5143,3 +5143,11 @@ fieldset.filter-group:last-child {
 .sba-agreement-line.is-signed {
     color: #166534;
 }
+
+
+.sba-agreement-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}

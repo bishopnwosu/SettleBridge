@@ -4167,7 +4167,7 @@ document.addEventListener("DOMContentLoaded", function () {
         providersAdminSupabase
           .from("provider_agreements")
           .select(
-            "id, provider_id, application_id, reference, status, sent_at, email_sent_at, email_error, signed_at, signer_name, signer_ip, signed_language, signed_email_sent_at",
+            "id, provider_id, application_id, reference, status, sent_at, email_sent_at, email_error, signed_at, signer_name, signer_ip, signed_language, signed_email_sent_at, token_expires_at, reminder_count, last_reminder_at, reminder_error",
           )
           .order("created_at", { ascending: false }),
       ]);
@@ -4460,21 +4460,83 @@ document.addEventListener("DOMContentLoaded", function () {
             (agreement.signed_language === "pt" ? ", in Portuguese" : "")
           : "Not yet";
 
+      const reminderCount = agreement ? agreement.reminder_count || 0 : 0;
+      pa("agreementRemindersCell").textContent = !agreement
+        ? "None"
+        : reminderCount === 0
+          ? "None yet"
+          : reminderCount + " sent, last on " + formatProviderDate(agreement.last_reminder_at);
+
+      const linkExpired =
+        agreement && agreement.status === "sent" && new Date(agreement.token_expires_at) < new Date();
+
       let hint = "";
       if (!agreement) {
         hint = "Providers approved before agreements were set up have none.";
+      } else if (agreement.status === "sent" && agreement.reminder_error) {
+        hint = "The last reminder could not be sent. Try again.";
+      } else if (linkExpired) {
+        hint = "The signing link has expired. Send a reminder to give them a new one.";
       } else if (agreement.status === "sent") {
-        hint = "Signing links expire 30 days after sending.";
+        hint =
+          "Link valid until " + formatProviderDate(agreement.token_expires_at) + ". " +
+          (reminderCount < 3
+            ? "Automatic reminders are sent 3, 10 and 20 days after the agreement."
+            : "All automatic reminders have been sent.");
       } else if (agreement.status === "signed" && !agreement.signed_email_sent_at) {
         hint = "The signed copy was not emailed. Download it and send it yourself.";
       }
       pa("agreementHint").textContent = hint;
+
+      pa("remindAgreementButton").hidden = !agreement || agreement.status !== "sent";
 
       const downloadButton = pa("downloadAgreementAdmin");
       downloadButton.hidden = !agreement;
       downloadButton.textContent =
         agreement && agreement.status === "signed" ? "Download signed PDF" : "Download PDF";
     }
+
+    // SEND A REMINDER NOW (gives the provider a new 30-day signing link)
+    pa("remindAgreementButton").addEventListener("click", async function () {
+      const provider = getSelectedProvider();
+      const agreement = provider && agreementsByProvider[provider.id];
+      if (!agreement || agreement.status !== "sent") return;
+
+      if (!confirm("Email " + provider.business_name + " a reminder with a new signing link? Links in earlier emails will stop working.")) {
+        return;
+      }
+
+      const button = this;
+      button.disabled = true;
+      button.textContent = "Sending...";
+
+      try {
+        const { data, error } = await providersAdminSupabase.functions.invoke("provider-agreement", {
+          body: { action: "admin-remind", agreementId: agreement.id },
+        });
+
+        if (error || !data || !data.ok) {
+          let message = "Could not send the reminder. Please try again.";
+          if (error && error.context && typeof error.context.json === "function") {
+            try {
+              const details = await error.context.json();
+              if (details.error) message = details.error;
+            } catch (readError) {
+              // keep the default message
+            }
+          }
+          console.error("Reminder error:", error);
+          showProviderToast(message, "error");
+          return;
+        }
+
+        showProviderToast("Reminder sent with a new signing link.", "success");
+        await loadAdminProviders();
+      } finally {
+        button.disabled = false;
+        button.textContent = "Send reminder";
+      }
+    });
 
     pa("downloadAgreementAdmin").addEventListener("click", async function () {
       const provider = getSelectedProvider();
@@ -5021,7 +5083,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!/^[a-f0-9]{64}$/.test(signToken)) {
         showProblem(
           "This link is not valid",
-          'Please use the "Review and sign" button in your approval email. If it still does not work, contact us.',
+          'Please use the "Review and sign" button in your most recent SettleBridge email. If it still does not work, contact us.',
         );
         return;
       }
@@ -5035,7 +5097,7 @@ document.addEventListener("DOMContentLoaded", function () {
           error ? "We could not load your agreement" : "This link is not valid",
           error
             ? "Please check your internet connection and try again."
-            : 'Please use the "Review and sign" button in your approval email. If it still does not work, contact us.',
+            : 'Please use the "Review and sign" button in your most recent SettleBridge email. Links in older reminder emails stop working. If it still does not work, contact us.',
         );
         return;
       }
@@ -5051,7 +5113,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (info.is_expired) {
         showProblem(
           "This link has expired",
-          "Signing links are valid for 30 days. Please contact us and we will send you a new one.",
+          "Signing links are valid for 30 days. Please use the link in your most recent SettleBridge email, or contact us and we will send you a new one.",
         );
         return;
       }
